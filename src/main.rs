@@ -11,11 +11,7 @@ use ratatui::{
     style::{Color, Stylize},
     symbols::{border, Marker},
     text::{Line, Text, ToSpan},
-    widgets::{
-        block::Title,
-        canvas::{Canvas, Rectangle},
-        Block, Paragraph, Widget,
-    },
+    widgets::{block::Title, canvas::Canvas, Block, Paragraph, Widget},
     DefaultTerminal, Frame,
 };
 
@@ -28,14 +24,11 @@ fn main() -> Result<()> {
 }
 
 struct App {
-    x: f64,
-    y: f64,
-    tick_count: u64,
-    marker: Marker,
-    timeout: Duration,
+    timeout: Duration, // todo: use u64 msecs
     remaining: Duration,
     fps: Fps,
 }
+
 pub struct Fps {
     last_frame_update: Instant,
     frame_count: u32,
@@ -76,10 +69,6 @@ impl Default for Fps {
 impl App {
     fn new() -> Self {
         Self {
-            x: 0.0,
-            y: 0.0,
-            tick_count: 0,
-            marker: Marker::Braille,
             timeout: Duration::new(5, 0),
             remaining: Duration::new(5, 0),
             fps: Fps::default(),
@@ -99,10 +88,22 @@ impl App {
                 if let Event::Key(key) = event::read()? {
                     match key.code {
                         KeyCode::Char('q') => break Ok(()),
-                        KeyCode::Down | KeyCode::Char('j') => self.y += 1.0,
-                        KeyCode::Up | KeyCode::Char('k') => self.y -= 1.0,
-                        KeyCode::Right | KeyCode::Char('l') => self.x += 1.0,
-                        KeyCode::Left | KeyCode::Char('h') => self.x -= 1.0,
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            self.timeout = self.timeout.saturating_sub(Duration::new(60, 0));
+                            self.remaining = self.remaining.saturating_sub(Duration::new(60, 0));
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            self.timeout = self.timeout.saturating_add(Duration::new(60, 0));
+                            self.remaining = self.timeout.saturating_add(Duration::new(60, 0));
+                        }
+                        KeyCode::Right | KeyCode::Char('l') => {
+                            self.timeout = self.timeout.saturating_add(Duration::new(1, 0));
+                            self.remaining = self.timeout.saturating_add(Duration::new(1, 0));
+                        }
+                        KeyCode::Left | KeyCode::Char('h') => {
+                            self.timeout = self.timeout.saturating_sub(Duration::new(1, 0));
+                            self.remaining = self.timeout.saturating_sub(Duration::new(1, 0));
+                        }
                         _ => {}
                     }
                 }
@@ -110,31 +111,16 @@ impl App {
 
             let elapsed = last_tick.elapsed();
             if elapsed >= tick_rate {
-                self.on_tick();
                 last_tick = Instant::now();
                 self.remaining = self.remaining.saturating_sub(elapsed);
             }
         }
     }
 
-    fn on_tick(&mut self) {
-        self.tick_count += 1;
-        // only change marker every 180 ticks (3s) to avoid stroboscopic effect
-        // if (self.tick_count % 180) == 0 {
-        //     // self.marker = match self.marker {
-        //     //     Marker::Dot => Marker::Braille,
-        //     //     Marker::Braille => Marker::Block,
-        //     //     Marker::Block => Marker::HalfBlock,
-        //     //     Marker::HalfBlock => Marker::Bar,
-        //     //     Marker::Bar => Marker::Dot,
-        //     // };
-        // }
-        // bounce the ball by flipping the velocity vector
-    }
-
     fn chrono_timeout(&self) -> impl Widget + '_ {
         let title = Title::from("Timeout Chrono".bold());
         let instructions = Title::from(Line::from(vec![
+            //todo: bad render here use mult line
             "one more second ".into(),
             "<Left>".blue().bold(),
             " 1 less second ".into(),
@@ -151,10 +137,6 @@ impl App {
             )
             .border_set(border::THICK);
 
-        // let timeout_text = Text::from(vec![Line::from(vec![
-        //     "Time Left: ".into()
-        //     self.x.to_string().yellow(),
-        // ])]);
         let timeout = self.remaining.as_secs().to_string();
         let timeout_text = Text::from(vec![
             Line::from(" Time Left: ").centered(),
@@ -192,50 +174,6 @@ impl App {
         frame.render_widget(block_info, area);
     }
 
-    // fn pong_canvas(&self) -> impl Widget + '_ {
-    //     Canvas::default()
-    //         // .block(Block::bordered().title("Pong"))
-    //         .marker(self.marker)
-    //         .paint(|ctx| {
-    //             // let radius = self.playground.x.pow(2) + self.playground.y.pow(2);
-    //             // let radius = f64::sqrt(radius as f64);
-    //             // let zone = ZONE as f64;
-    //             // ctx.draw(&Circle {
-    //             //     x: zone / 2.0,
-    //             //     y: zone / 2.0,
-    //             //     radius: (zone - 5.0) / 2.0,
-    //             //     color: Color::Yellow,
-    //             // });
-    //             // ctx.draw(&Rectangle {
-    //             //     x: zone / 2.0,
-    //             //     y: zone / 2.0,
-    //             //     width: (zone - 5.0) / 2.0,
-    //             //     height: (zone - 5.0) / 2.0,
-    //             //     color: Color::Yellow,
-    //             // })
-    //             for i in 0..=11 {
-    //                 ctx.draw(&Rectangle {
-    //                     x: f64::from(i * i + 3 * i) / 2.0 + 2.0,
-    //                     y: 2.0,
-    //                     width: f64::from(i),
-    //                     height: f64::from(i),
-    //                     color: Color::Red,
-    //                 });
-    //                 ctx.draw(&Rectangle {
-    //                     x: f64::from(i * i + 3 * i) / 2.0 + 2.0,
-    //                     y: 21.0,
-    //                     width: f64::from(i),
-    //                     height: f64::from(i),
-    //                     color: Color::Blue,
-    //                 });
-    //             }
-
-    //             // ctx.draw(&self.ball);
-    //         })
-    //         .x_bounds([0.0, ZONE as f64])
-    //         .y_bounds([0.0, ZONE as f64])
-    // }
-
     fn boxes_canvas(&self, area: Rect) -> impl Widget {
         let left = 0.0;
         let right = f64::from(area.width);
@@ -247,44 +185,16 @@ impl App {
         let top = f64::from(area.height).mul_add(2.0, -4.0);
         Canvas::default()
             .block(Block::bordered().title("Rects"))
-            .marker(self.marker)
+            .marker(Marker::Dot)
             .x_bounds([left, right])
             .y_bounds([bottom, top])
             .paint(move |ctx| {
-                // for i in 0..=11 {
-                //     ctx.draw(&Rectangle {
-                //         x: f64::from(i * i + 3 * i) / 2.0 + 2.0,
-                //         y: 2.0,
-                //         width: f64::from(i),
-                //         height: f64::from(i),
-                //         color: Color::Red,
-                //     });
-                //     ctx.draw(&Circle {
-                //         x: f64::from(i * i + 3 * i) / 2.0 + 2.0,
-                //         y: 21.0,
-                //         // width: f64::from(i),
-                //         radius: f64::from(i),
-                //         color: Color::Blue,
-                //     });
-                // }
-                // ctx.draw(&Rectangle {
-                //     x: 3.0,
-                //     y: 2.0,
-                //     width: right - 5.0,
-                //     height: top - 5.0,
-                //     color: Color::Blue,
-                // });
                 for i in 0..5 {
                     ctx.draw(&Arc {
-                        // x: right / 2.0,
-                        // y: top / 2.0,
                         x: right.div(2.0),
                         y: top.div(2.0),
                         radius: top.min(right).div(2.0).sub(i as f64),
                         arc: arc_completion as u32,
-                        // radius: (right.powf(2.0) + top.powf(2.0)).sqrt().div(2.0),
-                        // width: f64::from(area.width) - 5.0,
-                        // height: f64::from(area.height) - 5.0,
                         color: Color::Red,
                     });
                 }

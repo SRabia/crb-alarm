@@ -3,18 +3,12 @@ use ratatui::{
     widgets::canvas::{Painter, Shape},
 };
 
-/// A circle with a given center and radius and with a given color
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Arc {
-    /// `x` coordinate of the circle's center
     pub x: f64,
-    /// `y` coordinate of the circle's center
     pub y: f64,
-    /// Radius of the circle
     pub radius: f64,
-    // in angle degree
     pub arc: u32,
-    /// Color of the circle
     pub color: Color,
 }
 
