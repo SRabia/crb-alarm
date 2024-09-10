@@ -3,16 +3,17 @@ use std::{
     time::{Duration, Instant},
 };
 
+use cbr_alarm::arc::Arc;
 use color_eyre::Result;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode},
-    layout::{Constraint, Flex, Layout, Rect},
+    layout::{self, Constraint, Flex, Layout, Rect},
     style::{Color, Stylize},
     symbols::{border, Marker},
-    text::{Line, Text},
+    text::{Line, Text, ToSpan},
     widgets::{
         block::Title,
-        canvas::{Canvas, Circle, Rectangle},
+        canvas::{Canvas, Rectangle},
         Block, Paragraph, Widget,
     },
     DefaultTerminal, Frame,
@@ -26,17 +27,50 @@ fn main() -> Result<()> {
     app_result
 }
 
-const ZONE: u16 = 50;
-
 struct App {
     x: f64,
     y: f64,
-    ball: Circle,
-    playground: Rect,
-    vx: f64,
-    vy: f64,
     tick_count: u64,
     marker: Marker,
+    timeout: Duration,
+    remaining: Duration,
+    fps: Fps,
+}
+pub struct Fps {
+    last_frame_update: Instant,
+    frame_count: u32,
+    fps: f64,
+}
+
+impl Fps {
+    pub fn new() -> Self {
+        Self {
+            last_frame_update: Instant::now(),
+            frame_count: 0,
+            fps: 0.0,
+        }
+    }
+
+    pub fn update(&mut self) {
+        self.frame_count += 1;
+        let now = Instant::now();
+        let elapsed = (now - self.last_frame_update).as_secs_f64();
+        if elapsed >= 1.0 {
+            self.fps = self.frame_count as f64 / elapsed;
+            self.last_frame_update = now;
+            self.frame_count = 0;
+        }
+    }
+
+    pub fn fps(&self) -> f64 {
+        self.fps
+    }
+}
+
+impl Default for Fps {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl App {
@@ -44,17 +78,11 @@ impl App {
         Self {
             x: 0.0,
             y: 0.0,
-            ball: Circle {
-                x: 20.0,
-                y: 40.0,
-                radius: 10.0,
-                color: Color::Yellow,
-            },
-            playground: Rect::new(0, 0, ZONE, ZONE),
-            vx: 1.0,
-            vy: 1.0,
             tick_count: 0,
             marker: Marker::Braille,
+            timeout: Duration::new(5, 0),
+            remaining: Duration::new(5, 0),
+            fps: Fps::default(),
         }
     }
 
@@ -62,9 +90,12 @@ impl App {
         let tick_rate = Duration::from_millis(16);
         let mut last_tick = Instant::now();
         loop {
+            self.fps.update();
             terminal.draw(|frame| self.draw(frame))?;
-            let timeout = tick_rate.saturating_sub(last_tick.elapsed());
-            if event::poll(timeout)? {
+            // timeout = 16 - loop_interval
+            let interval_tick = tick_rate.saturating_sub(last_tick.elapsed());
+            if event::poll(interval_tick)? {
+                // block for 16ms
                 if let Event::Key(key) = event::read()? {
                     match key.code {
                         KeyCode::Char('q') => break Ok(()),
@@ -77,9 +108,11 @@ impl App {
                 }
             }
 
-            if last_tick.elapsed() >= tick_rate {
+            let elapsed = last_tick.elapsed();
+            if elapsed >= tick_rate {
                 self.on_tick();
                 last_tick = Instant::now();
+                self.remaining = self.remaining.saturating_sub(elapsed);
             }
         }
     }
@@ -97,21 +130,6 @@ impl App {
         //     // };
         // }
         // bounce the ball by flipping the velocity vector
-        let ball = &self.ball;
-        let playground = self.playground;
-        if ball.x - ball.radius < f64::from(playground.left())
-            || ball.x + ball.radius > f64::from(playground.right())
-        {
-            self.vx = -self.vx;
-        }
-        if ball.y - ball.radius < f64::from(playground.top())
-            || ball.y + ball.radius > f64::from(playground.bottom())
-        {
-            self.vy = -self.vy;
-        }
-
-        self.ball.x += self.vx;
-        self.ball.y += self.vy;
     }
 
     fn chrono_timeout(&self) -> impl Widget + '_ {
@@ -137,9 +155,10 @@ impl App {
         //     "Time Left: ".into()
         //     self.x.to_string().yellow(),
         // ])]);
+        let timeout = self.remaining.as_secs().to_string();
         let timeout_text = Text::from(vec![
             Line::from(" Time Left: ").centered(),
-            Line::from(self.x.to_string().yellow()),
+            Line::from(timeout.yellow()),
         ])
         .centered();
         Paragraph::new(timeout_text).centered().block(block)
@@ -147,77 +166,83 @@ impl App {
 
     fn draw(&self, frame: &mut Frame) {
         let area = frame.area();
-        // let area_squared = Rect::new(0, 0, 50, 50);
-        // fill(area_squared, frame.buffer_mut(), "█", Color::Red);
 
-        // frame.render_widget(self.pong_canvas(), area_squared);
         frame.render_widget(self.boxes_canvas(area), area);
-        let area_chrono = center_area(area, 30, 10);
+        let area_chrono = center_area(area, 20, 10);
         frame.render_widget(self.chrono_timeout(), area_chrono);
+        let message_fps = format!("{:.2} FPS", self.fps.fps());
+        let title_fps = Title::from(message_fps.to_span().dim())
+            .alignment(layout::Alignment::Left)
+            .position(ratatui::widgets::block::Position::Top);
+
         let block_info = Block::bordered()
             .title(
                 Title::from(format!(
-                    "{}x{} -> {}x{}",
-                    frame.area().width,
-                    frame.area().height,
-                    0,
+                    "{}x{} -> {:?}::{:?}",
+                    self.remaining.as_millis() as f64,
+                    self.timeout.as_millis() as f64,
+                    self.timeout,
                     0
                 ))
                 .alignment(ratatui::layout::Alignment::Right)
                 .position(ratatui::widgets::block::Position::Bottom),
             )
+            .title(title_fps)
             .border_set(border::THICK);
         frame.render_widget(block_info, area);
     }
 
-    fn pong_canvas(&self) -> impl Widget + '_ {
-        Canvas::default()
-            // .block(Block::bordered().title("Pong"))
-            .marker(self.marker)
-            .paint(|ctx| {
-                // let radius = self.playground.x.pow(2) + self.playground.y.pow(2);
-                // let radius = f64::sqrt(radius as f64);
-                let zone = ZONE as f64;
-                // ctx.draw(&Circle {
-                //     x: zone / 2.0,
-                //     y: zone / 2.0,
-                //     radius: (zone - 5.0) / 2.0,
-                //     color: Color::Yellow,
-                // });
-                // ctx.draw(&Rectangle {
-                //     x: zone / 2.0,
-                //     y: zone / 2.0,
-                //     width: (zone - 5.0) / 2.0,
-                //     height: (zone - 5.0) / 2.0,
-                //     color: Color::Yellow,
-                // })
-                for i in 0..=11 {
-                    ctx.draw(&Rectangle {
-                        x: f64::from(i * i + 3 * i) / 2.0 + 2.0,
-                        y: 2.0,
-                        width: f64::from(i),
-                        height: f64::from(i),
-                        color: Color::Red,
-                    });
-                    ctx.draw(&Rectangle {
-                        x: f64::from(i * i + 3 * i) / 2.0 + 2.0,
-                        y: 21.0,
-                        width: f64::from(i),
-                        height: f64::from(i),
-                        color: Color::Blue,
-                    });
-                }
+    // fn pong_canvas(&self) -> impl Widget + '_ {
+    //     Canvas::default()
+    //         // .block(Block::bordered().title("Pong"))
+    //         .marker(self.marker)
+    //         .paint(|ctx| {
+    //             // let radius = self.playground.x.pow(2) + self.playground.y.pow(2);
+    //             // let radius = f64::sqrt(radius as f64);
+    //             // let zone = ZONE as f64;
+    //             // ctx.draw(&Circle {
+    //             //     x: zone / 2.0,
+    //             //     y: zone / 2.0,
+    //             //     radius: (zone - 5.0) / 2.0,
+    //             //     color: Color::Yellow,
+    //             // });
+    //             // ctx.draw(&Rectangle {
+    //             //     x: zone / 2.0,
+    //             //     y: zone / 2.0,
+    //             //     width: (zone - 5.0) / 2.0,
+    //             //     height: (zone - 5.0) / 2.0,
+    //             //     color: Color::Yellow,
+    //             // })
+    //             for i in 0..=11 {
+    //                 ctx.draw(&Rectangle {
+    //                     x: f64::from(i * i + 3 * i) / 2.0 + 2.0,
+    //                     y: 2.0,
+    //                     width: f64::from(i),
+    //                     height: f64::from(i),
+    //                     color: Color::Red,
+    //                 });
+    //                 ctx.draw(&Rectangle {
+    //                     x: f64::from(i * i + 3 * i) / 2.0 + 2.0,
+    //                     y: 21.0,
+    //                     width: f64::from(i),
+    //                     height: f64::from(i),
+    //                     color: Color::Blue,
+    //                 });
+    //             }
 
-                // ctx.draw(&self.ball);
-            })
-            .x_bounds([0.0, ZONE as f64])
-            .y_bounds([0.0, ZONE as f64])
-    }
+    //             // ctx.draw(&self.ball);
+    //         })
+    //         .x_bounds([0.0, ZONE as f64])
+    //         .y_bounds([0.0, ZONE as f64])
+    // }
 
     fn boxes_canvas(&self, area: Rect) -> impl Widget {
         let left = 0.0;
         let right = f64::from(area.width);
         let bottom = 0.0;
+        let arc_completion =
+            360.0 - (self.remaining.as_millis() as f64 / self.timeout.as_millis() as f64) * 360.0;
+
         // this is the aspect ratio adjustement.. I don't know if will work for all screen ratio?
         let top = f64::from(area.height).mul_add(2.0, -4.0);
         Canvas::default()
@@ -249,13 +274,14 @@ impl App {
                 //     height: top - 5.0,
                 //     color: Color::Blue,
                 // });
-                for i in 0..10 {
-                    ctx.draw(&Circle {
+                for i in 0..5 {
+                    ctx.draw(&Arc {
                         // x: right / 2.0,
                         // y: top / 2.0,
                         x: right.div(2.0),
                         y: top.div(2.0),
-                        radius: right.div(4.0).sub(i as f64),
+                        radius: top.min(right).div(2.0).sub(i as f64),
+                        arc: arc_completion as u32,
                         // radius: (right.powf(2.0) + top.powf(2.0)).sqrt().div(2.0),
                         // width: f64::from(area.width) - 5.0,
                         // height: f64::from(area.height) - 5.0,
