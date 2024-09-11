@@ -34,18 +34,10 @@ jobs:
         override: true
 
     - name: Build
-      uses: dtolnay/rust-toolchain@stable
-      run: cargo build --release --target ${{matrix.target}}
-      # with:
-      #   command: cargo build
-      #   args: --release --target ${{ matrix.target }}
+      run: cargo build --release --target ${{ matrix.target }}
 
     - name: Run tests
-      uses: dtolnay/rust-toolchain@stable
-      run: cargo test
-      # with:
-      #   command: cargo test
-      #   args: --target ${{ matrix.target }}
+      run: cargo test --target ${{ matrix.target }}
 
     - name: Rename binary
       shell: bash
@@ -70,6 +62,8 @@ jobs:
     steps:
     - name: Download all artifacts
       uses: actions/download-artifact@v2
+      with:
+        path: ./artifacts
 
     - name: Create Release
       id: create_release
@@ -83,21 +77,24 @@ jobs:
         prerelease: false
 
     - name: Upload Linux Release Asset
+      if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./cbr-alarm-linux-x86_64/cbr-alarm-linux-x86_64
+        asset_path: ./artifacts/cbr-alarm-linux-x86_64
         asset_name: cbr-alarm-linux-x86_64
         asset_content_type: application/octet-stream
 
     - name: Upload Windows Release Asset
+      if: matrix.os == 'windows-latest'
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./cbr-alarm-windows-x86_64.exe/cbr-alarm-windows-x86_64.exe
+        asset_path: ./artifacts/cbr-alarm-windows-x86_64.exe
         asset_name: cbr-alarm-windows-x86_64.exe
         asset_content_type: application/octet-stream
+
