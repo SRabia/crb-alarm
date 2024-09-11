@@ -35,15 +35,17 @@ jobs:
 
     - name: Build
       uses: dtolnay/rust-toolchain@stable
-      with:
-        command: cargo build
-        args: --release --target ${{ matrix.target }}
+      run: cargo build --release --target ${{matrix.target}}
+      # with:
+      #   command: cargo build
+      #   args: --release --target ${{ matrix.target }}
 
     - name: Run tests
       uses: dtolnay/rust-toolchain@stable
-      with:
-        command: cargo test
-        args: --target ${{ matrix.target }}
+      run: cargo test
+      # with:
+      #   command: cargo test
+      #   args: --target ${{ matrix.target }}
 
     - name: Rename binary
       shell: bash
