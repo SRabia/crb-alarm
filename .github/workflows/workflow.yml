@@ -34,15 +34,15 @@ jobs:
         override: true
 
     - name: Build
-      uses: dtolnay/rust-toolchain@cargo
+      uses: dtolnay/rust-toolchain@stable
       with:
-        command: build
+        command: cargo build
         args: --release --target ${{ matrix.target }}
 
     - name: Run tests
-      uses: dtolnay/rust-toolchain@cargo
+      uses: dtolnay/rust-toolchain@stable
       with:
-        command: test
+        command: cargo test
         args: --target ${{ matrix.target }}
 
     - name: Rename binary
