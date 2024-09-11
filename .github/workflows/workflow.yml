@@ -16,10 +16,10 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: rust-app-linux-x86_64
+            artifact_name: cbr-alarm-linux-x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: rust-app-windows-x86_64.exe
+            artifact_name: cbr-alarm-windows-x86_64.exe
 
     runs-on: ${{ matrix.os }}
 
@@ -49,9 +49,9 @@ jobs:
       shell: bash
       run: |
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          mv target/${{ matrix.target }}/release/your_binary_name.exe ${{ matrix.artifact_name }}
+          mv target/${{ matrix.target }}/release/cbr-alarm.exe ${{ matrix.artifact_name }}
         else
-          mv target/${{ matrix.target }}/release/your_binary_name ${{ matrix.artifact_name }}
+          mv target/${{ matrix.target }}/release/cbr-alarm ${{ matrix.artifact_name }}
         fi
 
     - name: Upload artifact
@@ -86,8 +86,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./rust-app-linux-x86_64/rust-app-linux-x86_64
-        asset_name: rust-app-linux-x86_64
+        asset_path: ./cbr-alarm-linux-x86_64/cbr-alarm-linux-x86_64
+        asset_name: cbr-alarm-linux-x86_64
         asset_content_type: application/octet-stream
 
     - name: Upload Windows Release Asset
@@ -96,6 +96,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./rust-app-windows-x86_64.exe/rust-app-windows-x86_64.exe
-        asset_name: rust-app-windows-x86_64.exe
+        asset_path: ./cbr-alarm-windows-x86_64.exe/cbr-alarm-windows-x86_64.exe
+        asset_name: cbr-alarm-windows-x86_64.exe
         asset_content_type: application/octet-stream
