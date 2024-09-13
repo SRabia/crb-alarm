@@ -8,7 +8,7 @@ pub struct Cli {
     pub frame_rate: f64,
 
     #[command(subcommand)]
-    pub cmd: Commands,
+    pub cmd: Option<Commands>,
 }
 
 #[derive(Subcommand, Debug, Clone)]
@@ -22,7 +22,7 @@ pub struct DurationTmArg {
 }
 
 impl DurationTmArg {
-    fn parse(&self) -> Option<Duration> {
+    pub fn parse(&self) -> Option<Duration> {
         let parsable = self.duration.replace('h', "h ");
         let parsable = parsable.replace('s', "s ");
         let parsable = parsable.replace('m', "m ");

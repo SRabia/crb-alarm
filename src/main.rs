@@ -18,14 +18,19 @@ use std::{
 
 fn main() -> Result<()> {
     let args = cli::Cli::parse();
-    println!("{:?}", args);
-    Ok(())
 
-    // color_eyre::install()?;
-    // let terminal = ratatui::init();
-    // let app_result = App::new().run(terminal);
-    // ratatui::restore();
-    // app_result
+    let mut tm_s = Duration::from_secs(5);
+    if let Some(cmd) = args.cmd {
+        tm_s = match cmd {
+            cli::Commands::Timeout(t) => t.parse().unwrap(),
+        };
+    }
+
+    color_eyre::install()?;
+    let terminal = ratatui::init();
+    let app_result = App::new(tm_s).run(terminal);
+    ratatui::restore();
+    app_result
 }
 
 struct App {
@@ -72,10 +77,10 @@ impl Default for Fps {
 }
 
 impl App {
-    fn new() -> Self {
+    fn new(timeout: Duration) -> Self {
         Self {
-            timeout: Duration::new(5, 0),
-            remaining: Duration::new(5, 0),
+            timeout,
+            remaining: timeout,
             fps: Fps::default(),
         }
     }
