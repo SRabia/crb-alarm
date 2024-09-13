@@ -68,15 +68,12 @@ jobs:
         path: ./artifacts
 
     - name: Create Release
-      id: create_release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ github.sha }}
-        name: Release ${{ github.sha }}
-        draft: false
-        prerelease: false
-        files: |
-          ./artifacts/cbr-alarm-linux-x86_64/cbr-alarm-linux-x86_64
+      run: |
+        tag_name=$(date +'%Y.%m.%d-%H%M%S')-${GITHUB_SHA::7}
+        gh release create $tag_name \
+          --title "Release $tag_name" \
+          --notes "Automated release for commit ${GITHUB_SHA}" \
+          ./artifacts/cbr-alarm-linux-x86_64/cbr-alarm-linux-x86_64 \
           ./artifacts/cbr-alarm-windows-x86_64.exe/cbr-alarm-windows-x86_64.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
