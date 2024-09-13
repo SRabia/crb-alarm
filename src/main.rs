@@ -1,9 +1,6 @@
-use std::{
-    ops::{Div, Sub},
-    time::{Duration, Instant},
-};
-
 use cbr_alarm::arc::Arc;
+use cbr_alarm::cli;
+use clap::Parser;
 use color_eyre::Result;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode},
@@ -14,13 +11,21 @@ use ratatui::{
     widgets::{block::Title, canvas::Canvas, Block, Paragraph, Widget},
     DefaultTerminal, Frame,
 };
+use std::{
+    ops::{Div, Sub},
+    time::{Duration, Instant},
+};
 
 fn main() -> Result<()> {
-    color_eyre::install()?;
-    let terminal = ratatui::init();
-    let app_result = App::new().run(terminal);
-    ratatui::restore();
-    app_result
+    let args = cli::Cli::parse();
+    println!("{:?}", args);
+    Ok(())
+
+    // color_eyre::install()?;
+    // let terminal = ratatui::init();
+    // let app_result = App::new().run(terminal);
+    // ratatui::restore();
+    // app_result
 }
 
 struct App {
