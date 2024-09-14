@@ -20,8 +20,10 @@ pub enum Commands {
 pub struct DurationTmArg {
     duration: String,
 }
-
+//TODO: move this
+//TODO: have HMS display
 impl DurationTmArg {
+    //TODO: this need love... improve code here.. low prio thought
     pub fn parse(&self) -> Option<Duration> {
         let parsable = self.duration.replace('h', "h ");
         let parsable = parsable.replace('s', "s ");

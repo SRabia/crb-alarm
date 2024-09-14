@@ -1,10 +1,11 @@
 CRB alarm 
 
 # first sweep 
-- [ ] integrate clap with timeout 
-- [ ] write the readme and explain 
+- [X] integrate clap with timeout 
 - [ ] have a notification when timeout
 - [ ] play music with rodio(or else) at timeout
+- [ ] display time in hms 
+- [ ] workflow with git release a version
 
 
 
@@ -29,3 +30,9 @@ These are the details of idea of where it can go next
 - [ ] have a start stop binding
 - [ ] have a option, arg to play music during time or after time
 - [ ] play crb snipped on some control 
+
+
+
+## genral improvement and things
+- [ ] animation circle sucks with large timeout
+- [ ] write the readme and explain 
