@@ -18,11 +18,6 @@ use std::{
 };
 
 fn main() -> Result<()> {
-    // Command::new("wall")
-    //     .arg("Task Compelte!")
-    //     .spawn()
-    //     .expect("Failed to send wall message");
-
     let args = cli::Cli::parse();
 
     let mut tm_s = Duration::from_secs(5);
@@ -129,6 +124,10 @@ impl App {
             if elapsed >= tick_rate {
                 last_tick = Instant::now();
                 self.remaining = self.remaining.saturating_sub(elapsed);
+                if self.remaining.as_secs() == 0 {
+                    self.on_timeout_complete();
+                    break Ok(());
+                }
             }
         }
     }
@@ -215,6 +214,13 @@ impl App {
                     });
                 }
             })
+    }
+
+    fn on_timeout_complete(&self) {
+        Command::new("wall")
+            .arg("Task Compelte!")
+            .spawn()
+            .expect("Failed to send wall message");
     }
 }
 
