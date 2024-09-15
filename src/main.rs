@@ -13,10 +13,16 @@ use ratatui::{
 };
 use std::{
     ops::{Div, Sub},
+    process::Command,
     time::{Duration, Instant},
 };
 
 fn main() -> Result<()> {
+    // Command::new("wall")
+    //     .arg("Task Compelte!")
+    //     .spawn()
+    //     .expect("Failed to send wall message");
+
     let args = cli::Cli::parse();
 
     let mut tm_s = Duration::from_secs(5);
@@ -127,7 +133,7 @@ impl App {
         }
     }
 
-    fn chrono_timeout(&self) -> impl Widget + '_ {
+    fn get_tm_info_widget(&self) -> impl Widget + '_ {
         let title = Title::from("Timeout Chrono".bold());
         let instructions = Title::from(Line::from(vec![
             //todo: bad render here use mult line
@@ -159,9 +165,9 @@ impl App {
     fn draw(&self, frame: &mut Frame) {
         let area = frame.area();
 
-        frame.render_widget(self.boxes_canvas(area), area);
-        let area_chrono = center_area(area, 20, 10);
-        frame.render_widget(self.chrono_timeout(), area_chrono);
+        frame.render_widget(self.get_tm_animation_widget(area), area);
+        let area_chrono = get_center_area(area, 20, 10);
+        frame.render_widget(self.get_tm_info_widget(), area_chrono);
         let message_fps = format!("{:.2} FPS", self.fps.fps());
         let title_fps = Title::from(message_fps.to_span().dim())
             .alignment(layout::Alignment::Left)
@@ -184,7 +190,7 @@ impl App {
         frame.render_widget(block_info, area);
     }
 
-    fn boxes_canvas(&self, area: Rect) -> impl Widget {
+    fn get_tm_animation_widget(&self, area: Rect) -> impl Widget {
         let left = 0.0;
         let right = f64::from(area.width);
         let bottom = 0.0;
@@ -212,7 +218,7 @@ impl App {
     }
 }
 
-fn center_area(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
+fn get_center_area(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
     let vertical = Layout::vertical([Constraint::Percentage(percent_y)]).flex(Flex::Center);
     let horizontal = Layout::horizontal([Constraint::Percentage(percent_x)]).flex(Flex::Center);
     let [area] = vertical.areas(area);
