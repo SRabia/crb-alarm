@@ -13,7 +13,6 @@ use ratatui::{
 };
 use std::{
     ops::{Div, Sub},
-    process::Command,
     time::{Duration, Instant},
 };
 
@@ -38,6 +37,9 @@ struct App {
     timeout: Duration, // todo: use u64 msecs
     remaining: Duration,
     fps: Fps,
+    sink: rodio::Sink,
+    streamhandle: rodio::OutputStreamHandle,
+    stream: rodio::OutputStream,
 }
 
 pub struct Fps {
@@ -79,9 +81,14 @@ impl Default for Fps {
 
 impl App {
     fn new(timeout: Duration) -> Self {
+        let (stream, streamhandle) = rodio::OutputStream::try_default().unwrap();
+        let sink = rodio::Sink::try_new(&streamhandle).unwrap();
         Self {
             timeout,
             remaining: timeout,
+            sink,
+            stream,
+            streamhandle,
             fps: Fps::default(),
         }
     }
@@ -125,8 +132,8 @@ impl App {
                 last_tick = Instant::now();
                 self.remaining = self.remaining.saturating_sub(elapsed);
                 if self.remaining.as_secs() == 0 {
-                    self.on_timeout_complete();
-                    break Ok(());
+                    self.timeout_complete();
+                    // break Ok(());
                 }
             }
         }
@@ -216,11 +223,22 @@ impl App {
             })
     }
 
-    fn on_timeout_complete(&self) {
-        Command::new("wall")
-            .arg("Task Compelte!")
-            .spawn()
-            .expect("Failed to send wall message");
+    fn timeout_complete(&self) {
+        // std::process::Command::new("wall")
+        //     .arg("Task Compelte!")
+        //     .spawn()
+        //     .expect("Failed to send wall message");
+
+        // let (_s, sh) = rodio::OutputStream::try_default().unwrap();
+        // let sink = rodio::Sink::try_new(&sh).unwrap();
+        let oggfile =
+            std::io::BufReader::new(std::fs::File::open("assets/MidnightSurprise.ogg").unwrap());
+
+        let source = rodio::Decoder::new(oggfile).unwrap();
+        self.sink.append(source);
+        self.sink.play();
+        // std::thread::sleep(std::time::Duration::from_secs(5));
+        // self.sink.sleep_until_end();
     }
 }
 
