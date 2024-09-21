@@ -8,7 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  ALSA_NO_PKG_CONFIG: 1
   
 
 permissions:
@@ -36,6 +35,11 @@ jobs:
       with:
         toolchain: stable
         target: ${{ matrix.target }}
+    - name: Install ALSA deve libraries (Linux only)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y -qq libasound2-dev libssl-dev libpulse-dev libdbus-1-dev portaudio19-dev
 
     - name: Build
       run: cargo build --release --target ${{ matrix.target }}
