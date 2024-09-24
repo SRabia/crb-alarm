@@ -3,7 +3,7 @@ CRB alarm
 # first sweep 
 - [X] integrate clap with timeout 
 - [X] have a notification when timeout
-- [ ] display time in hms 
+- [X] display time in hms 
 - [ ] play music with rodio(or else) at timeout
 
 
@@ -17,6 +17,7 @@ These are the details of idea of where it can go next
 - [ ] animation zigzag
 - [ ] animation square spiral
 - [ ] animation spiral circle
+- [ ] animation change depending on duration(long animation for long timeout)
 - [ ] have numbers symbols large for timeout
 
 

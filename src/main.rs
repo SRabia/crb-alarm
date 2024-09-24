@@ -16,6 +16,19 @@ use std::{
     time::{Duration, Instant},
 };
 
+pub fn format_duration(d: Duration) -> (u64, u64, u64) {
+    let m = d.as_secs() / 60;
+    let s = d.as_secs() % 60;
+    let h = d.as_secs() / 3600;
+    (h, m, s)
+}
+
+// if rem_h > 0{
+//     format!("{}:{}:{}", rem_h, rem_min, rem_s)
+// }
+// else{
+//     format!("{}:{}", rem_min, rem_s)
+// }
 fn main() -> Result<()> {
     let args = cli::Cli::parse();
 
@@ -37,9 +50,6 @@ struct App {
     timeout: Duration, // todo: use u64 msecs
     remaining: Duration,
     fps: Fps,
-    sink: rodio::Sink,
-    streamhandle: rodio::OutputStreamHandle,
-    stream: rodio::OutputStream,
 }
 
 pub struct Fps {
@@ -81,14 +91,9 @@ impl Default for Fps {
 
 impl App {
     fn new(timeout: Duration) -> Self {
-        let (stream, streamhandle) = rodio::OutputStream::try_default().unwrap();
-        let sink = rodio::Sink::try_new(&streamhandle).unwrap();
         Self {
             timeout,
             remaining: timeout,
-            sink,
-            stream,
-            streamhandle,
             fps: Fps::default(),
         }
     }
@@ -96,6 +101,7 @@ impl App {
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
         let tick_rate = Duration::from_millis(16);
         let mut last_tick = Instant::now();
+        let mut done = false;
         loop {
             self.fps.update();
             terminal.draw(|frame| self.draw(frame))?;
@@ -131,9 +137,9 @@ impl App {
             if elapsed >= tick_rate {
                 last_tick = Instant::now();
                 self.remaining = self.remaining.saturating_sub(elapsed);
-                if self.remaining.as_secs() == 0 {
+                if !done && self.remaining.as_secs() == 0 {
+                    done = true; // one shot
                     self.timeout_complete();
-                    // break Ok(());
                 }
             }
         }
@@ -159,7 +165,15 @@ impl App {
             )
             .border_set(border::THICK);
 
-        let timeout = self.remaining.as_secs().to_string();
+        // let timeout = self.remaining.as_secs().to_string();
+        let (h, m, s) = format_duration(self.remaining);
+
+        let timeout = if h > 0 {
+            format!("{}:{}:{}", h, m, s)
+        } else {
+            format!("{}:{}", m, s)
+        };
+
         let timeout_text = Text::from(vec![
             Line::from(" Time Left: ").centered(),
             Line::from(timeout.yellow()),
@@ -229,16 +243,23 @@ impl App {
         //     .spawn()
         //     .expect("Failed to send wall message");
 
-        // let (_s, sh) = rodio::OutputStream::try_default().unwrap();
-        // let sink = rodio::Sink::try_new(&sh).unwrap();
-        let oggfile =
-            std::io::BufReader::new(std::fs::File::open("assets/MidnightSurprise.ogg").unwrap());
+        // let sender = thread::spawn(move || {
+        //     tx.send("Hello, thread".to_owned())
+        //         .expect("Unable to send on channel");
+        // });
 
-        let source = rodio::Decoder::new(oggfile).unwrap();
-        self.sink.append(source);
-        self.sink.play();
-        // std::thread::sleep(std::time::Duration::from_secs(5));
-        // self.sink.sleep_until_end();
+        std::thread::spawn(move || {
+            let (_s, sh) = rodio::OutputStream::try_default().unwrap();
+            let oggfile = std::io::BufReader::new(
+                std::fs::File::open("assets/MidnightSurprise.ogg").unwrap(),
+            );
+            let source = rodio::Decoder::new(oggfile).unwrap();
+            let sink = rodio::Sink::try_new(&sh).unwrap();
+            sink.append(source);
+
+            sink.sleep_until_end();
+            println!("never");
+        });
     }
 }
 
