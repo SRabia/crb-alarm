@@ -4,7 +4,7 @@ CRB alarm
 - [X] integrate clap with timeout 
 - [X] have a notification when timeout
 - [X] display time in hms 
-- [ ] play music with rodio(or else) at timeout
+- [X] play music with rodio(or else) at timeout
 
 
 
@@ -18,6 +18,8 @@ These are the details of idea of where it can go next
 - [ ] animation square spiral
 - [ ] animation spiral circle
 - [ ] animation change depending on duration(long animation for long timeout)
+- [ ] overlay progression have a gray full animation to indicate progression
+- [ ] for long timeout make appropriate animation, have long vs short animation selection
 - [ ] have numbers symbols large for timeout
 
 
@@ -25,6 +27,7 @@ These are the details of idea of where it can go next
 - [ ] how to integrate spotify api or something play with a given time?
 - [ ] start music
 - [ ] stop music
+- [ ] increase volume as timeout reaching 0 
  
  ## control
 - [ ] have a start stop key binding

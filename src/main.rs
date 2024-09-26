@@ -2,6 +2,7 @@ use cbr_alarm::arc::Arc;
 use cbr_alarm::cli;
 use clap::Parser;
 use color_eyre::Result;
+use rand::Rng;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode},
     layout::{self, Constraint, Flex, Layout, Rect},
@@ -13,6 +14,7 @@ use ratatui::{
 };
 use std::{
     ops::{Div, Sub},
+    path::PathBuf,
     time::{Duration, Instant},
 };
 
@@ -23,13 +25,28 @@ pub fn format_duration(d: Duration) -> (u64, u64, u64) {
     (h, m, s)
 }
 
-// if rem_h > 0{
-//     format!("{}:{}:{}", rem_h, rem_min, rem_s)
-// }
-// else{
-//     format!("{}:{}", rem_min, rem_s)
-// }
 fn main() -> Result<()> {
+    // let files = std::fs::read_dir("./asset/")?.map(|entry| {
+    //     let dir = entry.un;
+    //     std::fs::File::open("assets/MidnightSurprise.ogg").unwrap()
+    // });
+    let files: Vec<PathBuf> = std::fs::read_dir("./assets/")?
+        .filter_map(|entry| {
+            let dir = entry.ok()?;
+            if dir.path().is_file() {
+                let dir = dir.path();
+                let ext = dir.extension()?;
+                if ext == "ogg" {
+                    Some(dir)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .collect();
+
     let args = cli::Cli::parse();
 
     let mut tm_s = Duration::from_secs(5);
@@ -41,7 +58,7 @@ fn main() -> Result<()> {
 
     color_eyre::install()?;
     let terminal = ratatui::init();
-    let app_result = App::new(tm_s).run(terminal);
+    let app_result = App::new(tm_s, files).run(terminal);
     ratatui::restore();
     app_result
 }
@@ -50,6 +67,7 @@ struct App {
     timeout: Duration, // todo: use u64 msecs
     remaining: Duration,
     fps: Fps,
+    sound_files: Vec<PathBuf>,
 }
 
 pub struct Fps {
@@ -90,11 +108,12 @@ impl Default for Fps {
 }
 
 impl App {
-    fn new(timeout: Duration) -> Self {
+    fn new(timeout: Duration, sound_files: Vec<PathBuf>) -> Self {
         Self {
             timeout,
             remaining: timeout,
             fps: Fps::default(),
+            sound_files,
         }
     }
 
@@ -238,27 +257,16 @@ impl App {
     }
 
     fn timeout_complete(&self) {
-        // std::process::Command::new("wall")
-        //     .arg("Task Compelte!")
-        //     .spawn()
-        //     .expect("Failed to send wall message");
-
-        // let sender = thread::spawn(move || {
-        //     tx.send("Hello, thread".to_owned())
-        //         .expect("Unable to send on channel");
-        // });
-
+        let rand_select = rand::thread_rng().gen_range(1..=self.sound_files.len() - 1);
+        let sound_select = self.sound_files[rand_select].clone();
         std::thread::spawn(move || {
             let (_s, sh) = rodio::OutputStream::try_default().unwrap();
-            let oggfile = std::io::BufReader::new(
-                std::fs::File::open("assets/MidnightSurprise.ogg").unwrap(),
-            );
+            let oggfile = std::io::BufReader::new(std::fs::File::open(sound_select).unwrap());
             let source = rodio::Decoder::new(oggfile).unwrap();
             let sink = rodio::Sink::try_new(&sh).unwrap();
             sink.append(source);
 
             sink.sleep_until_end();
-            println!("never");
         });
     }
 }
