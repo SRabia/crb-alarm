@@ -1,5 +1,6 @@
-use cbr_alarm::arc::Arc;
 use cbr_alarm::cli;
+use cbr_alarm::shapes::Arc;
+use cbr_alarm::shapes::ZigZag;
 use clap::Parser;
 use color_eyre::Result;
 use rand::Rng;
@@ -49,7 +50,7 @@ fn main() -> Result<()> {
 
     let args = cli::Cli::parse();
 
-    let mut tm_s = Duration::from_secs(5);
+    let mut tm_s = Duration::from_secs(10);
     if let Some(cmd) = args.cmd {
         tm_s = match cmd {
             cli::Commands::Timeout(t) => t.parse().unwrap(),
@@ -233,8 +234,7 @@ impl App {
         let left = 0.0;
         let right = f64::from(area.width);
         let bottom = 0.0;
-        let arc_completion =
-            360.0 - (self.remaining.as_millis() as f64 / self.timeout.as_millis() as f64) * 360.0;
+        let complete_perc = self.remaining.as_millis() as f64 / self.timeout.as_millis() as f64;
 
         // this is the aspect ratio adjustement.. I don't know if will work for all screen ratio?
         let top = f64::from(area.height).mul_add(2.0, -4.0);
@@ -249,7 +249,7 @@ impl App {
                         x: right.div(2.0),
                         y: top.div(2.0),
                         radius: top.min(right).div(2.0).sub(i as f64),
-                        arc: arc_completion as u32,
+                        arc_perc: complete_perc,
                         color: Color::Red,
                     });
                 }
