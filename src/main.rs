@@ -13,6 +13,7 @@ use ratatui::{
     widgets::{block::Title, canvas::Canvas, Block, Paragraph, Widget},
     DefaultTerminal, Frame,
 };
+use std::ops::Div;
 use std::{
     path::PathBuf,
     time::{Duration, Instant},
@@ -49,7 +50,7 @@ fn main() -> Result<()> {
 
     let args = cli::Cli::parse();
 
-    let mut tm_s = Duration::from_secs(10);
+    let mut tm_s = Duration::from_secs(20);
     if let Some(cmd) = args.cmd {
         tm_s = match cmd {
             cli::Commands::Timeout(t) => t.parse().unwrap(),
@@ -203,7 +204,7 @@ impl App {
     fn draw(&self, frame: &mut Frame) {
         let area = frame.area();
 
-        frame.render_widget(self.get_tm_animation_widget_arc(area), area);
+        frame.render_widget(self.get_tm_animation_widget(area), area);
         let area_chrono = get_center_area(area, 20, 10);
         frame.render_widget(self.get_tm_info_widget(), area_chrono);
         let message_fps = format!("{:.2} FPS", self.fps.fps());
@@ -228,33 +229,7 @@ impl App {
         frame.render_widget(block_info, area);
     }
 
-    fn _get_tm_animation_widget_zigzag(&self, area: Rect) -> impl Widget {
-        let left = 0.0;
-        let right = f64::from(area.width);
-        let bottom = 0.0;
-        let complete_perc = self.remaining.as_millis() as f64 / self.timeout.as_millis() as f64;
-        let complete_perc = 1.0 - complete_perc;
-
-        // this is the aspect ratio adjustement.. I don't know if will work for all screen ratio?
-        let top = f64::from(area.height).mul_add(2.0, -4.0);
-        Canvas::default()
-            .block(Block::bordered().title("Rects"))
-            .marker(Marker::Bar)
-            .x_bounds([left, right])
-            .y_bounds([bottom, top])
-            .paint(move |ctx| {
-                ctx.draw(&ZigZag {
-                    x: 0.0,
-                    y: 0.0,
-                    size: top.min(right),
-                    gap: 3,
-                    fill_perc: complete_perc,
-                    color: Color::Red,
-                });
-            })
-    }
-
-    fn get_tm_animation_widget_arc(&self, area: Rect) -> impl Widget {
+    fn get_tm_animation_widget(&self, area: Rect) -> impl Widget {
         let left = 0.0;
         let right = f64::from(area.width);
         let bottom = 0.0;
@@ -264,18 +239,11 @@ impl App {
         // this is the aspect ratio adjustement.. I don't know if will work for all screen ratio?
         let top = f64::from(area.height).mul_add(2.0, -4.0);
         // let shape = Arc::centered(right, top, 5, complete_perc, Color::Red);
-        let shape = ZigZag {
-            x: 10.0,
-            y: 0.0,
-            size: top.min(right),
-            gap: 3,
-            fill_perc: complete_perc,
-            color: Color::Red,
-        };
+        let shape = ZigZag::centered(right, top, 5, complete_perc, Color::Red);
 
         Canvas::default()
             .block(Block::bordered())
-            .marker(Marker::Dot)
+            .marker(Marker::Block)
             .x_bounds([left, right])
             .y_bounds([bottom, top])
             .paint(move |ctx| {

@@ -63,6 +63,25 @@ pub struct ZigZag {
     pub color: Color,
 }
 
+impl ZigZag {
+    pub fn centered(width: f64, height: f64, gap: usize, fill_perc: f64, color: Color) -> Self {
+        let size = width.min(height);
+        let x = width.div(2.0) - size.div(2.0);
+        let x = x.max(0.0);
+        let y = height.div(2.0) - size.div(2.0);
+        let y = y.max(0.0);
+
+        Self {
+            x,
+            y,
+            size,
+            gap,
+            fill_perc,
+            color,
+        }
+    }
+}
+
 impl Shape for ZigZag {
     fn draw(&self, painter: &mut Painter<'_, '_>) {
         let total = self.size * self.size;
@@ -70,50 +89,50 @@ impl Shape for ZigZag {
         let fill = (self.fill_perc * total) as usize;
         let mut fill_count = 0;
         let size = self.size as usize;
-        // let offset_x = self.x as usize;
+        let offset_x = self.x as usize;
+        let offset_y = self.y as usize;
 
         let mut change_dir = true;
         for d in (0..size).step_by(self.gap) {
-            let mut y = d;
+            let mut dy = d;
             change_dir = !change_dir;
-            for x in 0..d {
+            for dx in 0..d {
                 fill_count += self.gap;
                 if fill_count > fill {
                     return;
                 }
 
                 let (px, py, c) = if change_dir {
-                    (d - x, x, Color::Red)
-                    // (x, y, Color::Red)
+                    (d - dx + offset_x, dx + offset_y, Color::Red)
                 } else {
-                    (x, y, Color::Blue)
+                    (dx + offset_x, dy + offset_y, Color::Blue)
                 };
                 //let (px, py, c) = (x, y, Color::Blue);
                 if let Some((zx, zy)) = painter.get_point(px as f64, py as f64) {
                     painter.paint(zx, zy, c);
                 }
-                y = y.saturating_sub(1);
+                dy = dy.saturating_sub(1);
             }
         }
 
         for d in (0..size).step_by(self.gap) {
-            let mut y = size;
+            let mut dy = size;
             change_dir = !change_dir;
-            for x in d..(size) {
+            for dx in d..(size) {
                 fill_count += self.gap;
                 if fill_count > fill {
                     return;
                 }
 
                 let (px, py, c) = if change_dir {
-                    (size - (x - d), x, Color::Red)
+                    (size - (dx - d) + offset_x, dx + offset_y, Color::Red)
                 } else {
-                    (x, y, Color::Blue)
+                    (dx + offset_x, dy + offset_y, Color::Blue)
                 };
                 if let Some((zx, zy)) = painter.get_point(px as f64, py as f64) {
                     painter.paint(zx, zy, c);
                 }
-                y = y.saturating_sub(1);
+                dy = dy.saturating_sub(1);
             }
         }
     }
