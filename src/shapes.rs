@@ -84,9 +84,10 @@ impl ZigZag {
 
 impl Shape for ZigZag {
     fn draw(&self, painter: &mut Painter<'_, '_>) {
-        let total = self.size * self.size;
+        let total = (self.size + self.gap as f64) * (self.size + self.gap as f64);
 
         let fill = (self.fill_perc * total) as usize;
+
         let mut fill_count = 0;
         let size = self.size as usize;
         let offset_x = self.x as usize;
@@ -111,21 +112,13 @@ impl Shape for ZigZag {
                     painter.paint(zx, zy, c);
                 }
 
-                // if self.gap > 1 {
-                //     for _ in 0..self.gap {
-                //         let (px, py, c) = if change_dir {
-                //             (px, py + 1, Color::Red)
-                //         } else {
-                //             (px + 1, py, Color::Red)
-                //         };
-                //         if let Some((zx, zy)) = painter.get_point(px as f64, py as f64) {
-                //             painter.paint(zx, zy, c);
-                //         }
-                //     }
-                // }
                 dy = dy.saturating_sub(1);
             }
             for g in 1..self.gap {
+                fill_count += 1;
+                if fill_count > fill {
+                    return;
+                }
                 let (px, py, c) = if change_dir {
                     (offset_x, d + g, Color::Red)
                 } else {
@@ -157,7 +150,15 @@ impl Shape for ZigZag {
                 dy = dy.saturating_sub(1);
             }
 
+            if d + offset_x + self.gap > size + offset_x {
+                break;
+            }
+
             for g in 1..self.gap {
+                fill_count += 1;
+                if fill_count > fill {
+                    return;
+                }
                 let (px, py, c) = if change_dir {
                     (d + g + offset_x, size + offset_y, Color::Red)
                 } else {

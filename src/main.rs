@@ -50,7 +50,7 @@ fn main() -> Result<()> {
 
     let args = cli::Cli::parse();
 
-    let mut tm_s = Duration::from_secs(20);
+    let mut tm_s = Duration::from_secs(5);
     if let Some(cmd) = args.cmd {
         tm_s = match cmd {
             cli::Commands::Timeout(t) => t.parse().unwrap(),
@@ -239,7 +239,7 @@ impl App {
         // this is the aspect ratio adjustement.. I don't know if will work for all screen ratio?
         let top = f64::from(area.height).mul_add(2.0, -4.0);
         // let shape = Arc::centered(right, top, 5, complete_perc, Color::Red);
-        let shape = ZigZag::centered(right, top, 10, complete_perc, Color::Red);
+        let shape = ZigZag::centered(right, top, 15, complete_perc, Color::Red);
 
         Canvas::default()
             .block(Block::bordered())
