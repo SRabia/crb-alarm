@@ -107,11 +107,33 @@ impl Shape for ZigZag {
                 } else {
                     (dx + offset_x, dy + offset_y, Color::Blue)
                 };
-                //let (px, py, c) = (x, y, Color::Blue);
                 if let Some((zx, zy)) = painter.get_point(px as f64, py as f64) {
                     painter.paint(zx, zy, c);
                 }
+
+                // if self.gap > 1 {
+                //     for _ in 0..self.gap {
+                //         let (px, py, c) = if change_dir {
+                //             (px, py + 1, Color::Red)
+                //         } else {
+                //             (px + 1, py, Color::Red)
+                //         };
+                //         if let Some((zx, zy)) = painter.get_point(px as f64, py as f64) {
+                //             painter.paint(zx, zy, c);
+                //         }
+                //     }
+                // }
                 dy = dy.saturating_sub(1);
+            }
+            for g in 1..self.gap {
+                let (px, py, c) = if change_dir {
+                    (offset_x, d + g, Color::Red)
+                } else {
+                    (d + g + offset_x, offset_y, Color::Blue)
+                };
+                if let Some((zx, zy)) = painter.get_point(px as f64, py as f64) {
+                    painter.paint(zx, zy, c);
+                }
             }
         }
 
@@ -133,6 +155,17 @@ impl Shape for ZigZag {
                     painter.paint(zx, zy, c);
                 }
                 dy = dy.saturating_sub(1);
+            }
+
+            for g in 1..self.gap {
+                let (px, py, c) = if change_dir {
+                    (d + g + offset_x, size + offset_y, Color::Red)
+                } else {
+                    (size + offset_x, d + g + offset_y, Color::Blue)
+                };
+                if let Some((zx, zy)) = painter.get_point(px as f64, py as f64) {
+                    painter.paint(zx, zy, c);
+                }
             }
         }
     }
