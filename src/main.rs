@@ -14,7 +14,6 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 use std::{
-    ops::{Div, Sub},
     path::PathBuf,
     time::{Duration, Instant},
 };
@@ -264,21 +263,23 @@ impl App {
 
         // this is the aspect ratio adjustement.. I don't know if will work for all screen ratio?
         let top = f64::from(area.height).mul_add(2.0, -4.0);
+        // let shape = Arc::centered(right, top, 5, complete_perc, Color::Red);
+        let shape = ZigZag {
+            x: 10.0,
+            y: 0.0,
+            size: top.min(right),
+            gap: 3,
+            fill_perc: complete_perc,
+            color: Color::Red,
+        };
+
         Canvas::default()
-            .block(Block::bordered().title("Rects"))
+            .block(Block::bordered())
             .marker(Marker::Dot)
             .x_bounds([left, right])
             .y_bounds([bottom, top])
             .paint(move |ctx| {
-                for i in 0..5 {
-                    ctx.draw(&Arc {
-                        x: right.div(2.0),
-                        y: top.div(2.0),
-                        radius: top.min(right).div(2.0).sub(i as f64),
-                        arc_perc: complete_perc,
-                        color: Color::Red,
-                    });
-                }
+                ctx.draw(&shape);
             })
     }
 
