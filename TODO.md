@@ -27,6 +27,7 @@ These are the details of idea of where it can go next
 - [ ] start music
 - [ ] stop music
 - [ ] increase volume as timeout reaching 0 
+- [ ] stop music when timeout increase after reach 0
  
  ## control
 - [ ] have a start stop key binding
