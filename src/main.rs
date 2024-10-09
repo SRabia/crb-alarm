@@ -13,7 +13,7 @@ use ratatui::{
     widgets::{block::Title, canvas::Canvas, Block, Paragraph, Widget},
     DefaultTerminal, Frame,
 };
-use std::ops::Div;
+
 use std::{
     path::PathBuf,
     time::{Duration, Instant},
@@ -27,10 +27,6 @@ pub fn format_duration(d: Duration) -> (u64, u64, u64) {
 }
 
 fn main() -> Result<()> {
-    // let files = std::fs::read_dir("./asset/")?.map(|entry| {
-    //     let dir = entry.un;
-    //     std::fs::File::open("assets/MidnightSurprise.ogg").unwrap()
-    // });
     let files: Vec<PathBuf> = std::fs::read_dir("./assets/")?
         .filter_map(|entry| {
             let dir = entry.ok()?;
@@ -239,11 +235,11 @@ impl App {
         // this is the aspect ratio adjustement.. I don't know if will work for all screen ratio?
         let top = f64::from(area.height).mul_add(2.0, -4.0);
         // let shape = Arc::centered(right, top, 5, complete_perc, Color::Red);
-        let shape = ZigZag::centered(right, top, 15, complete_perc, Color::Red);
+        let shape = ZigZag::centered(right, top, 8, complete_perc, Color::Red);
 
         Canvas::default()
             .block(Block::bordered())
-            .marker(Marker::Block)
+            .marker(Marker::HalfBlock)
             .x_bounds([left, right])
             .y_bounds([bottom, top])
             .paint(move |ctx| {

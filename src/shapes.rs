@@ -84,88 +84,75 @@ impl ZigZag {
 
 impl Shape for ZigZag {
     fn draw(&self, painter: &mut Painter<'_, '_>) {
-        let total = (self.size + self.gap as f64) * (self.size + self.gap as f64);
+        let fill_limit = (self.fill_perc * (self.size + self.gap as f64).powi(2)) as usize;
+        let mut filled = 0;
 
-        let fill = (self.fill_perc * total) as usize;
+        // rust 101 for the noob! filled and painter variable are owned by this
+        // closure now that's why you got error! .... just pure pain
+        let mut draw_point = |x, y, inc| {
+            filled += inc;
+            if filled > fill_limit {
+                return false;
+            }
+            if let Some((zx, zy)) =
+                painter.get_point((x + self.x as usize) as f64, (y + self.y as usize) as f64)
+            {
+                painter.paint(zx, zy, self.color);
+            }
+            true
+        };
 
-        let mut fill_count = 0;
         let size = self.size as usize;
-        let offset_x = self.x as usize;
-        let offset_y = self.y as usize;
+        //let offset_x = self.x as usize;
 
-        let mut change_dir = true;
+        let mut going_up = true;
         for d in (0..size).step_by(self.gap) {
             let mut dy = d;
-            change_dir = !change_dir;
+            going_up = !going_up;
             for dx in 0..d {
-                fill_count += self.gap;
-                if fill_count > fill {
+                let (x, y) = if going_up { (d - dx, dx) } else { (dx, dy) };
+                if !draw_point(x, y, self.gap) {
                     return;
-                }
-
-                let (px, py, c) = if change_dir {
-                    (d - dx + offset_x, dx + offset_y, Color::Red)
-                } else {
-                    (dx + offset_x, dy + offset_y, Color::Blue)
-                };
-                if let Some((zx, zy)) = painter.get_point(px as f64, py as f64) {
-                    painter.paint(zx, zy, c);
                 }
 
                 dy = dy.saturating_sub(1);
             }
             for g in 1..self.gap {
-                fill_count += 1;
-                if fill_count > fill {
+                let (x, y) = if going_up { (0, d + g) } else { (d + g, 0) };
+                if !draw_point(x, y, 1) {
                     return;
-                }
-                let (px, py, c) = if change_dir {
-                    (offset_x, d + g, Color::Red)
-                } else {
-                    (d + g + offset_x, offset_y, Color::Blue)
-                };
-                if let Some((zx, zy)) = painter.get_point(px as f64, py as f64) {
-                    painter.paint(zx, zy, c);
                 }
             }
         }
 
         for d in (0..size).step_by(self.gap) {
             let mut dy = size;
-            change_dir = !change_dir;
+            going_up = !going_up;
             for dx in d..(size) {
-                fill_count += self.gap;
-                if fill_count > fill {
+                let (x, y) = if going_up {
+                    (size - (dx - d), dx)
+                } else {
+                    (dx, dy)
+                };
+                if !draw_point(x, y, self.gap) {
                     return;
                 }
 
-                let (px, py, c) = if change_dir {
-                    (size - (dx - d) + offset_x, dx + offset_y, Color::Red)
-                } else {
-                    (dx + offset_x, dy + offset_y, Color::Blue)
-                };
-                if let Some((zx, zy)) = painter.get_point(px as f64, py as f64) {
-                    painter.paint(zx, zy, c);
-                }
                 dy = dy.saturating_sub(1);
             }
 
-            if d + offset_x + self.gap > size + offset_x {
-                break;
-            }
+            // if d + offset_x + self.gap > size + offset_x {
+            //     break;
+            // }
 
             for g in 1..self.gap {
-                fill_count += 1;
-                if fill_count > fill {
-                    return;
-                }
-                let (px, py, c) = if change_dir {
-                    (d + g + offset_x, size + offset_y, Color::Red)
+                let (x, y) = if going_up {
+                    (d + g, size)
                 } else {
-                    (size + offset_x, d + g + offset_y, Color::Blue)
+                    (size, d + g)
                 };
-                if let Some((zx, zy)) = painter.get_point(px as f64, py as f64) {
-                    painter.paint(zx, zy, c);
+                if !draw_point(x, y, self.gap) {
+                    return;
                 }
             }
         }
