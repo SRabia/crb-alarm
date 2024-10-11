@@ -1,6 +1,5 @@
 use cbr_alarm::cli;
-use cbr_alarm::shapes::Arc;
-use cbr_alarm::shapes::ZigZag;
+use cbr_alarm::shapes;
 use clap::Parser;
 use color_eyre::Result;
 use rand::Rng;
@@ -213,8 +212,8 @@ impl App {
                 Title::from(format!(
                     "{}x{} -> {}::{:.3}",
                     area.width,
+                    area.height,
                     f64::from(area.height).mul_add(2.0, -4.0),
-                    0,
                     1.0 - (self.remaining.as_millis() as f64 / self.timeout.as_millis() as f64)
                 ))
                 .alignment(ratatui::layout::Alignment::Right)
@@ -234,8 +233,9 @@ impl App {
 
         // this is the aspect ratio adjustement.. I don't know if will work for all screen ratio?
         let top = f64::from(area.height).mul_add(2.0, -4.0);
-        // let shape = Arc::centered(right, top, 5, complete_perc, Color::Red);
-        let shape = ZigZag::centered(right, top, 8, complete_perc, Color::Red);
+        // let shape = shapes::Arc::centered(right, top, 5, complete_perc, Color::Red);
+        // let shape = ZigZag::centered(right, top, 8, complete_perc, Color::Red);
+        let shape = shapes::Spiral::centered(right, top, complete_perc, Color::Red);
 
         Canvas::default()
             .block(Block::bordered())

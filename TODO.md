@@ -13,13 +13,13 @@ These are the details of idea of where it can go next
 
 
 ## the animation
-- [ ] animation zigzag
-- [ ] animation square spiral
-- [ ] animation spiral circle
+- [X] animation zigzag
+- [X] animation archimedean spiral
 - [ ] animation change depending on duration(long animation for long timeout)
 - [ ] overlay progression have a gray full animation to indicate progression
 - [ ] for long timeout make appropriate animation, have long vs short animation selection
 - [ ] have numbers symbols large for timeout
+- [ ] select for animation
 
 
 ## music player

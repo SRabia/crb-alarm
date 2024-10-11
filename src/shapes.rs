@@ -1,4 +1,7 @@
-use std::ops::{Div, Sub};
+use std::{
+    f32::consts::PI,
+    ops::{Div, Sub},
+};
 
 use ratatui::{
     style::Color,
@@ -154,6 +157,51 @@ impl Shape for ZigZag {
                 if !draw_point(x, y, self.gap) {
                     return;
                 }
+            }
+        }
+    }
+}
+
+pub struct Spiral {
+    pub x: f64,
+    pub y: f64,
+    pub radius: f64,
+    pub completion_perc: f64, // percentage arc 0 to 100
+    pub color: Color,
+}
+
+impl Spiral {
+    pub fn centered(width: f64, height: f64, arc_perc: f64, color: Color) -> Self {
+        Self {
+            x: width.div(2.0),
+            y: height.div(2.0),
+            radius: width.min(height).div(2.0),
+            completion_perc: arc_perc,
+            color,
+        }
+    }
+}
+
+impl Shape for Spiral {
+    fn draw(&self, painter: &mut Painter<'_, '_>) {
+        // Archimedean spiral: r =  a + b*theta
+
+        let a = -self.radius;
+        let b = 1.0;
+        let range = -a / (b * PI as f64);
+        let range = (180.0 * range * self.completion_perc) as u32;
+        for angle in 0..range {
+            // 1degree increment
+            // let radius = self.radius.sub( as f64);
+            // let angle = angle as f64;
+            let radians = f64::from(angle).to_radians();
+            let radius = a + (b * radians);
+
+            //convert to x,y coordinate
+            let circle_x = radius.mul_add(radians.cos(), self.x);
+            let circle_y = radius.mul_add(radians.sin(), self.y);
+            if let Some((x, y)) = painter.get_point(circle_x, circle_y) {
+                painter.paint(x, y, self.color);
             }
         }
     }
