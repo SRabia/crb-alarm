@@ -13,10 +13,12 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 
-use std::{
-    path::PathBuf,
-    time::{Duration, Instant},
-};
+use rust_embed::RustEmbed;
+use std::time::{Duration, Instant};
+
+#[derive(RustEmbed)]
+#[folder = "assets/"]
+struct Asset;
 
 pub fn format_duration(d: Duration) -> (u64, u64, u64) {
     let m = d.as_secs() / 60;
@@ -26,23 +28,6 @@ pub fn format_duration(d: Duration) -> (u64, u64, u64) {
 }
 
 fn main() -> Result<()> {
-    let files: Vec<PathBuf> = std::fs::read_dir("./assets/")?
-        .filter_map(|entry| {
-            let dir = entry.ok()?;
-            if dir.path().is_file() {
-                let dir = dir.path();
-                let ext = dir.extension()?;
-                if ext == "ogg" {
-                    Some(dir)
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        })
-        .collect();
-
     let args = cli::Cli::parse();
 
     let mut tm_s = Duration::from_secs(5);
@@ -54,7 +39,7 @@ fn main() -> Result<()> {
 
     color_eyre::install()?;
     let terminal = ratatui::init();
-    let app_result = App::new(tm_s, files).run(terminal);
+    let app_result = App::new(tm_s).run(terminal);
     ratatui::restore();
     app_result
 }
@@ -63,7 +48,6 @@ struct App {
     timeout: Duration, // todo: use u64 msecs
     remaining: Duration,
     fps: Fps,
-    sound_files: Vec<PathBuf>,
 }
 
 pub struct Fps {
@@ -104,12 +88,11 @@ impl Default for Fps {
 }
 
 impl App {
-    fn new(timeout: Duration, sound_files: Vec<PathBuf>) -> Self {
+    fn new(timeout: Duration) -> Self {
         Self {
             timeout,
             remaining: timeout,
             fps: Fps::default(),
-            sound_files,
         }
     }
 
@@ -233,9 +216,9 @@ impl App {
 
         // this is the aspect ratio adjustement.. I don't know if will work for all screen ratio?
         let top = f64::from(area.height).mul_add(2.0, -4.0);
-        // let shape = shapes::Arc::centered(right, top, 5, complete_perc, Color::Red);
+        let shape = shapes::Arc::centered(right, top, 5, complete_perc, Color::Red);
         // let shape = ZigZag::centered(right, top, 8, complete_perc, Color::Red);
-        let shape = shapes::Spiral::centered(right, top, complete_perc, Color::Red);
+        // let shape = shapes::Spiral::centered(right, top, complete_perc, Color::Red);
 
         Canvas::default()
             .block(Block::bordered())
@@ -248,15 +231,21 @@ impl App {
     }
 
     fn timeout_complete(&self) {
-        let rand_select = rand::thread_rng().gen_range(1..=self.sound_files.len() - 1);
-        let sound_select = self.sound_files[rand_select].clone();
+        let nb_sound_files = Asset::iter().count();
+        let rand_select = rand::thread_rng().gen_range(0..=nb_sound_files);
+        let sounds: Vec<_> = Asset::iter().collect();
+        let sound_select = sounds.get(rand_select).unwrap().clone();
+
         std::thread::spawn(move || {
             let (_s, sh) = rodio::OutputStream::try_default().unwrap();
-            let oggfile = std::io::BufReader::new(std::fs::File::open(sound_select).unwrap());
-            let source = rodio::Decoder::new(oggfile).unwrap();
-            let sink = rodio::Sink::try_new(&sh).unwrap();
-            sink.append(source);
+            let file_data = Asset::get(sound_select.as_ref()).unwrap();
 
+            let cursor = std::io::Cursor::new(file_data.data);
+            let reader = std::io::BufReader::new(cursor);
+            let source = rodio::Decoder::new(reader).unwrap();
+            let sink = rodio::Sink::try_new(&sh).unwrap();
+
+            sink.append(source);
             sink.sleep_until_end();
         });
     }
