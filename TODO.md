@@ -19,7 +19,9 @@ These are the details of idea of where it can go next
 - [ ] overlay progression have a gray full animation to indicate progression
 - [ ] for long timeout make appropriate animation, have long vs short animation selection
 - [ ] have numbers symbols large for timeout
-- [ ] select for animation
+- [ ] better timeout displaying
+- [ ] select random animation
+- [ ] select random marker that match the best
 
 
 ## music player
@@ -45,3 +47,9 @@ These are the details of idea of where it can go next
 - [ ] write the readme and explain 
 - [ ] figure out at least something uselful with this because the whole idea is kind of lame and useless..
 - [ ] wtf am I doing with my life..
+
+## bug to fix maybe
+- [ ] zig zag is glitchy pattern is off the screen
+
+## research
+- [ ] spotify api how it work? is it possible?

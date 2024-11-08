@@ -1,8 +1,10 @@
 use cbr_alarm::cli;
+use cbr_alarm::fps;
 use cbr_alarm::shapes;
 use clap::Parser;
 use color_eyre::Result;
 use rand::Rng;
+use ratatui::widgets::canvas;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode},
     layout::{self, Constraint, Flex, Layout, Rect},
@@ -47,52 +49,19 @@ fn main() -> Result<()> {
 struct App {
     timeout: Duration, // todo: use u64 msecs
     remaining: Duration,
-    fps: Fps,
-}
-
-pub struct Fps {
-    last_frame_update: Instant,
-    frame_count: u32,
-    fps: f64,
-}
-
-impl Fps {
-    pub fn new() -> Self {
-        Self {
-            last_frame_update: Instant::now(),
-            frame_count: 0,
-            fps: 0.0,
-        }
-    }
-
-    pub fn update(&mut self) {
-        self.frame_count += 1;
-        let now = Instant::now();
-        let elapsed = (now - self.last_frame_update).as_secs_f64();
-        if elapsed >= 1.0 {
-            self.fps = self.frame_count as f64 / elapsed;
-            self.last_frame_update = now;
-            self.frame_count = 0;
-        }
-    }
-
-    pub fn fps(&self) -> f64 {
-        self.fps
-    }
-}
-
-impl Default for Fps {
-    fn default() -> Self {
-        Self::new()
-    }
+    fps: fps::Fps,
+    shapes_selected: shapes::ShapeSelect,
 }
 
 impl App {
     fn new(timeout: Duration) -> Self {
+        let rand_select = rand::thread_rng().gen_range(0..3);
+
         Self {
             timeout,
             remaining: timeout,
-            fps: Fps::default(),
+            fps: fps::Fps::default(),
+            shapes_selected: shapes::ShapeSelect::select_from(rand_select),
         }
     }
 
@@ -207,32 +176,77 @@ impl App {
         frame.render_widget(block_info, area);
     }
 
+    // fn get_random_animation(&self, right: f64, top: f64, compl: f64) -> (canvas::Shape, Marker) {
+    //     // let rand_select = rand::thread_rng().gen_range(0..3);
+    //     (
+    //         shapes::Arc::centered(right, top, 8, compl, Color::Red),
+    //         Marker::Dot,
+    //     )
+    //     // match rand_select {
+    //     //     0 => (
+    //     //         shapes::ShapeType::Arc(shapes::Arc::centered(right, top, 8, compl, Color::Red)),
+    //     //         Marker::Dot,
+    //     //     ),
+    //     //     1 => (
+    //     //         shapes::ShapeType::Spiral(shapes::Spiral::centered(right, top, compl, Color::Red)),
+    //     //         Marker::HalfBlock,
+    //     //     ),
+    //     //     2 => (
+    //     //         shapes::ShapeType::ZigZag(shapes::ZigZag::centered(
+    //     //             right,
+    //     //             top,
+    //     //             8,
+    //     //             compl,
+    //     //             Color::Red,
+    //     //         )),
+    //     //         Marker::HalfBlock,
+    //     //     ),
+    //     //     _ => (
+    //     //         shapes::ShapeType::Spiral(shapes::Spiral::centered(right, top, compl, Color::Red)),
+    //     //         Marker::HalfBlock,
+    //     //     ),
+    //     // }
+    // }
+
     fn get_tm_animation_widget(&self, area: Rect) -> impl Widget {
         let left = 0.0;
         let right = f64::from(area.width);
         let bottom = 0.0;
         let complete_perc = self.remaining.as_millis() as f64 / self.timeout.as_millis() as f64;
         let complete_perc = 1.0 - complete_perc;
-
-        // this is the aspect ratio adjustement.. I don't know if will work for all screen ratio?
         let top = f64::from(area.height).mul_add(2.0, -4.0);
-        let shape = shapes::Arc::centered(right, top, 5, complete_perc, Color::Red);
-        // let shape = ZigZag::centered(right, top, 8, complete_perc, Color::Red);
-        // let shape = shapes::Spiral::centered(right, top, complete_perc, Color::Red);
+
+        // let shape = match self.shapes_selected {
+        //     shapes::ShapeSelect::ArcSelect => {
+        //         shapes::Arc::centered(right, top, 8, complete_perc, Color::Red)
+        //     }
+        //     shapes::ShapeSelect::SpiralSelect => {
+        //         shapes::Spiral::centered(right, top, complete_perc, Color::Red)
+        //     }
+        //     shapes::ShapeSelect::ZigZagSelect => {
+        //         shapes::ZigZag::centered(right, top, 5, complete_perc, Color::Red)
+        //     }
+        // };
+        // let marker = match self.shapes_selected {
+        //     shapes::ShapeSelect::ArcSelect => Marker::Dot,
+        //     _ => Marker::HalfBlock,
+        // };
+        let shape = self.shapes_selected.create_shape(right, top, complete_perc);
+        let marker = self.shapes_selected.get_marker();
 
         Canvas::default()
             .block(Block::bordered())
-            .marker(Marker::HalfBlock)
+            .marker(Marker::Dot)
             .x_bounds([left, right])
             .y_bounds([bottom, top])
             .paint(move |ctx| {
-                ctx.draw(&shape);
+                shape.draw_on_canvas(ctx);
             })
     }
 
     fn timeout_complete(&self) {
         let nb_sound_files = Asset::iter().count();
-        let rand_select = rand::thread_rng().gen_range(0..=nb_sound_files);
+        let rand_select = rand::thread_rng().gen_range(0..nb_sound_files);
         let sounds: Vec<_> = Asset::iter().collect();
         let sound_select = sounds.get(rand_select).unwrap().clone();
 

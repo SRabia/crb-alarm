@@ -5,8 +5,32 @@ use std::{
 
 use ratatui::{
     style::Color,
-    widgets::canvas::{Painter, Shape},
+    symbols,
+    widgets::canvas::{self, Painter, Shape},
 };
+
+pub enum ShapeSelect {
+    ArcSelect,
+    SpiralSelect,
+    ZigZagSelect,
+}
+
+pub trait AnimationShape {
+    fn create(width: f64, height: f64, animation_completion: f64) -> Self;
+    fn marker() -> symbols::Marker;
+    fn draw_on_canvas(&self, ctx: &mut canvas::Context);
+}
+
+impl ShapeSelect {
+    pub fn select_from(select: u32) -> Self {
+        match select {
+            0 => Self::ArcSelect,
+            1 => Self::SpiralSelect,
+            2 => Self::ZigZagSelect,
+            _ => Self::SpiralSelect,
+        }
+    }
+}
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Arc {
@@ -19,13 +43,7 @@ pub struct Arc {
 }
 
 impl Arc {
-    pub fn centered(
-        width: f64,
-        height: f64,
-        thickness: usize,
-        arc_perc: f64,
-        color: Color,
-    ) -> Self {
+    pub fn center(width: f64, height: f64, thickness: usize, arc_perc: f64, color: Color) -> Self {
         Self {
             x: width.div(2.0),
             y: height.div(2.0),
@@ -191,9 +209,6 @@ impl Shape for Spiral {
         let range = -a / (b * PI as f64);
         let range = (180.0 * range * self.completion_perc) as u32;
         for angle in 0..range {
-            // 1degree increment
-            // let radius = self.radius.sub( as f64);
-            // let angle = angle as f64;
             let radians = f64::from(angle).to_radians();
             let radius = a + (b * radians);
 
@@ -203,6 +218,68 @@ impl Shape for Spiral {
             if let Some((x, y)) = painter.get_point(circle_x, circle_y) {
                 painter.paint(x, y, self.color);
             }
+        }
+    }
+}
+
+impl AnimationShape for Arc {
+    fn create(width: f64, height: f64, animation_completion: f64) -> Self {
+        Self::center(width, height, 8, animation_completion, Color::Red)
+    }
+    fn marker() -> symbols::Marker {
+        symbols::Marker::Dot
+    }
+    fn draw_on_canvas(&self, ctx: &mut canvas::Context) {
+        ctx.draw(self);
+    }
+}
+
+impl AnimationShape for ZigZag {
+    fn create(width: f64, height: f64, animation_completion: f64) -> Self {
+        Self::centered(width, height, 5, animation_completion, Color::Red)
+    }
+    fn marker() -> symbols::Marker {
+        symbols::Marker::HalfBlock
+    }
+    fn draw_on_canvas(&self, ctx: &mut canvas::Context) {
+        ctx.draw(self);
+    }
+}
+
+impl AnimationShape for Spiral {
+    fn create(width: f64, height: f64, animation_completion: f64) -> Self {
+        Self::centered(width, height, animation_completion, Color::Red)
+    }
+    fn marker() -> symbols::Marker {
+        symbols::Marker::HalfBlock
+    }
+    fn draw_on_canvas(&self, ctx: &mut canvas::Context) {
+        ctx.draw(self);
+    }
+}
+
+impl ShapeSelect {
+    pub fn create_shape(
+        &self,
+        width: f64,
+        height: f64,
+        animation_completion: f64,
+    ) -> Box<dyn AnimationShape> {
+        match self {
+            ShapeSelect::ArcSelect => Box::new(Arc::create(width, height, animation_completion)),
+            ShapeSelect::SpiralSelect => {
+                Box::new(Spiral::create(width, height, animation_completion))
+            }
+            ShapeSelect::ZigZagSelect => {
+                Box::new(ZigZag::create(width, height, animation_completion))
+            }
+        }
+    }
+    pub fn get_marker(&self) -> symbols::Marker {
+        match self {
+            ShapeSelect::ArcSelect => Arc::marker(),
+            ShapeSelect::SpiralSelect => Spiral::marker(),
+            ShapeSelect::ZigZagSelect => ZigZag::marker(),
         }
     }
 }
