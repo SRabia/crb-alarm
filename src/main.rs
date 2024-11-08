@@ -1,15 +1,15 @@
 use cbr_alarm::cli;
 use cbr_alarm::fps;
 use cbr_alarm::shapes;
+use cbr_alarm::shapes::ShapeSelect;
 use clap::Parser;
 use color_eyre::Result;
 use rand::Rng;
-use ratatui::widgets::canvas;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode},
     layout::{self, Constraint, Flex, Layout, Rect},
-    style::{Color, Stylize},
-    symbols::{border, Marker},
+    style::Stylize,
+    symbols::border,
     text::{Line, Text, ToSpan},
     widgets::{block::Title, canvas::Canvas, Block, Paragraph, Widget},
     DefaultTerminal, Frame,
@@ -50,18 +50,19 @@ struct App {
     timeout: Duration, // todo: use u64 msecs
     remaining: Duration,
     fps: fps::Fps,
-    shapes_selected: shapes::ShapeSelect,
+    shapes_selected: ShapeSelect,
 }
 
 impl App {
     fn new(timeout: Duration) -> Self {
         let rand_select = rand::thread_rng().gen_range(0..3);
+        let s = shapes::ShapeSelect::select_from(rand_select);
 
         Self {
             timeout,
             remaining: timeout,
             fps: fps::Fps::default(),
-            shapes_selected: shapes::ShapeSelect::select_from(rand_select),
+            shapes_selected: s,
         }
     }
 
@@ -176,38 +177,6 @@ impl App {
         frame.render_widget(block_info, area);
     }
 
-    // fn get_random_animation(&self, right: f64, top: f64, compl: f64) -> (canvas::Shape, Marker) {
-    //     // let rand_select = rand::thread_rng().gen_range(0..3);
-    //     (
-    //         shapes::Arc::centered(right, top, 8, compl, Color::Red),
-    //         Marker::Dot,
-    //     )
-    //     // match rand_select {
-    //     //     0 => (
-    //     //         shapes::ShapeType::Arc(shapes::Arc::centered(right, top, 8, compl, Color::Red)),
-    //     //         Marker::Dot,
-    //     //     ),
-    //     //     1 => (
-    //     //         shapes::ShapeType::Spiral(shapes::Spiral::centered(right, top, compl, Color::Red)),
-    //     //         Marker::HalfBlock,
-    //     //     ),
-    //     //     2 => (
-    //     //         shapes::ShapeType::ZigZag(shapes::ZigZag::centered(
-    //     //             right,
-    //     //             top,
-    //     //             8,
-    //     //             compl,
-    //     //             Color::Red,
-    //     //         )),
-    //     //         Marker::HalfBlock,
-    //     //     ),
-    //     //     _ => (
-    //     //         shapes::ShapeType::Spiral(shapes::Spiral::centered(right, top, compl, Color::Red)),
-    //     //         Marker::HalfBlock,
-    //     //     ),
-    //     // }
-    // }
-
     fn get_tm_animation_widget(&self, area: Rect) -> impl Widget {
         let left = 0.0;
         let right = f64::from(area.width);
@@ -216,31 +185,25 @@ impl App {
         let complete_perc = 1.0 - complete_perc;
         let top = f64::from(area.height).mul_add(2.0, -4.0);
 
-        // let shape = match self.shapes_selected {
-        //     shapes::ShapeSelect::ArcSelect => {
-        //         shapes::Arc::centered(right, top, 8, complete_perc, Color::Red)
-        //     }
-        //     shapes::ShapeSelect::SpiralSelect => {
-        //         shapes::Spiral::centered(right, top, complete_perc, Color::Red)
-        //     }
-        //     shapes::ShapeSelect::ZigZagSelect => {
-        //         shapes::ZigZag::centered(right, top, 5, complete_perc, Color::Red)
-        //     }
-        // };
-        // let marker = match self.shapes_selected {
-        //     shapes::ShapeSelect::ArcSelect => Marker::Dot,
-        //     _ => Marker::HalfBlock,
-        // };
-        let shape = self.shapes_selected.create_shape(right, top, complete_perc);
+        let shape = match &self.shapes_selected {
+            shapes::ShapeSelect::ArcSelect(a) => {
+                ShapeSelect::ArcSelect(a.clone().center(right, top, complete_perc))
+            }
+            shapes::ShapeSelect::SpiralSelect(s) => {
+                ShapeSelect::SpiralSelect(s.clone().center(right, top, complete_perc))
+            }
+            shapes::ShapeSelect::ZigZagSelect(z) => {
+                ShapeSelect::ZigZagSelect(z.clone().center(right, top, complete_perc))
+            }
+        };
         let marker = self.shapes_selected.get_marker();
-
         Canvas::default()
             .block(Block::bordered())
-            .marker(Marker::Dot)
+            .marker(marker)
             .x_bounds([left, right])
             .y_bounds([bottom, top])
             .paint(move |ctx| {
-                shape.draw_on_canvas(ctx);
+                ctx.draw(&shape);
             })
     }
 

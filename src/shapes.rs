@@ -6,28 +6,39 @@ use std::{
 use ratatui::{
     style::Color,
     symbols,
-    widgets::canvas::{self, Painter, Shape},
+    widgets::canvas::{Painter, Shape},
 };
 
 pub enum ShapeSelect {
-    ArcSelect,
-    SpiralSelect,
-    ZigZagSelect,
-}
-
-pub trait AnimationShape {
-    fn create(width: f64, height: f64, animation_completion: f64) -> Self;
-    fn marker() -> symbols::Marker;
-    fn draw_on_canvas(&self, ctx: &mut canvas::Context);
+    ArcSelect(Arc),
+    SpiralSelect(Spiral),
+    ZigZagSelect(ZigZag),
 }
 
 impl ShapeSelect {
     pub fn select_from(select: u32) -> Self {
         match select {
-            0 => Self::ArcSelect,
-            1 => Self::SpiralSelect,
-            2 => Self::ZigZagSelect,
-            _ => Self::SpiralSelect,
+            0 => Self::ArcSelect(Arc::new(8, Color::Red)),
+            1 => Self::SpiralSelect(Spiral::new(Color::Red)),
+            2 => Self::ZigZagSelect(ZigZag::new(5, Color::Red)),
+            _ => Self::SpiralSelect(Spiral::new(Color::Red)),
+        }
+    }
+    pub fn get_marker(&self) -> symbols::Marker {
+        match self {
+            ShapeSelect::ArcSelect(_) => Arc::get_marker(),
+            ShapeSelect::SpiralSelect(_) => Spiral::get_marker(),
+            ShapeSelect::ZigZagSelect(_) => ZigZag::get_marker(),
+        }
+    }
+}
+
+impl Shape for ShapeSelect {
+    fn draw(&self, painter: &mut Painter<'_, '_>) {
+        match self {
+            ShapeSelect::ArcSelect(a) => a.draw(painter),
+            ShapeSelect::SpiralSelect(s) => s.draw(painter),
+            ShapeSelect::ZigZagSelect(z) => z.draw(painter),
         }
     }
 }
@@ -43,14 +54,29 @@ pub struct Arc {
 }
 
 impl Arc {
-    pub fn center(width: f64, height: f64, thickness: usize, arc_perc: f64, color: Color) -> Self {
+    pub fn new(thickness: usize, color: Color) -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            radius: 1.0,
+            thickness,
+            arc_perc: 0.0,
+            color,
+        }
+    }
+
+    pub fn get_marker() -> symbols::Marker {
+        symbols::Marker::Dot
+    }
+
+    pub fn center(self, width: f64, height: f64, arc_perc: f64) -> Self {
         Self {
             x: width.div(2.0),
             y: height.div(2.0),
             radius: width.min(height).div(2.0),
-            thickness,
+            thickness: self.thickness,
             arc_perc,
-            color,
+            color: self.color,
         }
     }
 }
@@ -85,7 +111,21 @@ pub struct ZigZag {
 }
 
 impl ZigZag {
-    pub fn centered(width: f64, height: f64, gap: usize, fill_perc: f64, color: Color) -> Self {
+    pub fn new(gap: usize, color: Color) -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            size: 0.0,
+            gap,
+            fill_perc: 0.0,
+            color,
+        }
+    }
+    pub fn get_marker() -> symbols::Marker {
+        symbols::Marker::HalfBlock
+    }
+
+    pub fn center(self, width: f64, height: f64, fill_perc: f64) -> Self {
         let size = width.min(height);
         let x = width.div(2.0) - size.div(2.0);
         let x = x.max(0.0);
@@ -96,9 +136,9 @@ impl ZigZag {
             x,
             y,
             size,
-            gap,
+            gap: self.gap,
             fill_perc,
-            color,
+            color: self.color,
         }
     }
 }
@@ -180,6 +220,7 @@ impl Shape for ZigZag {
     }
 }
 
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Spiral {
     pub x: f64,
     pub y: f64,
@@ -189,14 +230,28 @@ pub struct Spiral {
 }
 
 impl Spiral {
-    pub fn centered(width: f64, height: f64, arc_perc: f64, color: Color) -> Self {
+    pub fn new(color: Color) -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            radius: 0.0,
+            completion_perc: 0.0,
+            color,
+        }
+    }
+
+    pub fn center(self, width: f64, height: f64, arc_perc: f64) -> Self {
         Self {
             x: width.div(2.0),
             y: height.div(2.0),
             radius: width.min(height).div(2.0),
             completion_perc: arc_perc,
-            color,
+            color: self.color,
         }
+    }
+
+    pub fn get_marker() -> symbols::Marker {
+        symbols::Marker::HalfBlock
     }
 }
 
@@ -218,68 +273,6 @@ impl Shape for Spiral {
             if let Some((x, y)) = painter.get_point(circle_x, circle_y) {
                 painter.paint(x, y, self.color);
             }
-        }
-    }
-}
-
-impl AnimationShape for Arc {
-    fn create(width: f64, height: f64, animation_completion: f64) -> Self {
-        Self::center(width, height, 8, animation_completion, Color::Red)
-    }
-    fn marker() -> symbols::Marker {
-        symbols::Marker::Dot
-    }
-    fn draw_on_canvas(&self, ctx: &mut canvas::Context) {
-        ctx.draw(self);
-    }
-}
-
-impl AnimationShape for ZigZag {
-    fn create(width: f64, height: f64, animation_completion: f64) -> Self {
-        Self::centered(width, height, 5, animation_completion, Color::Red)
-    }
-    fn marker() -> symbols::Marker {
-        symbols::Marker::HalfBlock
-    }
-    fn draw_on_canvas(&self, ctx: &mut canvas::Context) {
-        ctx.draw(self);
-    }
-}
-
-impl AnimationShape for Spiral {
-    fn create(width: f64, height: f64, animation_completion: f64) -> Self {
-        Self::centered(width, height, animation_completion, Color::Red)
-    }
-    fn marker() -> symbols::Marker {
-        symbols::Marker::HalfBlock
-    }
-    fn draw_on_canvas(&self, ctx: &mut canvas::Context) {
-        ctx.draw(self);
-    }
-}
-
-impl ShapeSelect {
-    pub fn create_shape(
-        &self,
-        width: f64,
-        height: f64,
-        animation_completion: f64,
-    ) -> Box<dyn AnimationShape> {
-        match self {
-            ShapeSelect::ArcSelect => Box::new(Arc::create(width, height, animation_completion)),
-            ShapeSelect::SpiralSelect => {
-                Box::new(Spiral::create(width, height, animation_completion))
-            }
-            ShapeSelect::ZigZagSelect => {
-                Box::new(ZigZag::create(width, height, animation_completion))
-            }
-        }
-    }
-    pub fn get_marker(&self) -> symbols::Marker {
-        match self {
-            ShapeSelect::ArcSelect => Arc::marker(),
-            ShapeSelect::SpiralSelect => Spiral::marker(),
-            ShapeSelect::ZigZagSelect => ZigZag::marker(),
         }
     }
 }
