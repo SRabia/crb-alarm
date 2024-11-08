@@ -7,7 +7,7 @@ CRB alarm
 - [X] play music with rodio(or else) at timeout
 
 
-# what next
+# what's next
 after the first inital working skeleton, that I call the first sweep. just having the basic.
 These are the details of idea of where it can go next
 
@@ -20,8 +20,8 @@ These are the details of idea of where it can go next
 - [ ] for long timeout make appropriate animation, have long vs short animation selection
 - [ ] have numbers symbols large for timeout
 - [ ] better timeout displaying
-- [ ] select random animation
-- [ ] select random marker that match the best
+- [X] select random animation
+- [X] select random marker that match the best
 
 
 ## music player
@@ -45,11 +45,18 @@ These are the details of idea of where it can go next
 - [ ] animation circle sucks with large timeout
 - [ ] in general the application is slow less than 30fps(on my shitty laptop though)
 - [ ] write the readme and explain 
-- [ ] figure out at least something uselful with this because the whole idea is kind of lame and useless..
-- [ ] wtf am I doing with my life..
+- [ ] not stable, it crash when increase/reduce time
+- [ ] test on different os/platform look like audio is not working smooth on all platform
 
 ## bug to fix maybe
 - [ ] zig zag is glitchy pattern is off the screen
 
 ## research
 - [ ] spotify api how it work? is it possible?
+- [ ] can this work on embedd? with a serial comm TUI? probably need to reseach crossterm
+
+
+
+# important note here!
+figure out at least something uselful with this because the whole idea is kind of lame and useless..
+wtf am I doing with my life..

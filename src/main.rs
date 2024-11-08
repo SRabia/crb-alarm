@@ -185,6 +185,8 @@ impl App {
         let complete_perc = 1.0 - complete_perc;
         let top = f64::from(area.height).mul_add(2.0, -4.0);
 
+        //TODO: can avoid the clone if we don't stop the shapes_selected in App
+        // instead we create it in this function
         let shape = match &self.shapes_selected {
             shapes::ShapeSelect::ArcSelect(a) => {
                 ShapeSelect::ArcSelect(a.clone().center(right, top, complete_perc))

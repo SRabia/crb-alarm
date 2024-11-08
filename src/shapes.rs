@@ -21,7 +21,7 @@ impl ShapeSelect {
             0 => Self::ArcSelect(Arc::new(8, Color::Red)),
             1 => Self::SpiralSelect(Spiral::new(Color::Red)),
             2 => Self::ZigZagSelect(ZigZag::new(5, Color::Red)),
-            _ => Self::SpiralSelect(Spiral::new(Color::Red)),
+            _ => Self::SpiralSelect(Spiral::new(Color::Red)), //TODO: have something more smart here
         }
     }
     pub fn get_marker(&self) -> symbols::Marker {
