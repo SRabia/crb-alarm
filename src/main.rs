@@ -8,7 +8,7 @@ use rand::Rng;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode},
     layout::{self, Constraint, Flex, Layout, Rect},
-    style::Stylize,
+    style::{Color, Stylize},
     symbols::border,
     text::{Line, Text, ToSpan},
     widgets::{block::Title, canvas::Canvas, Block, Paragraph, Widget},
@@ -56,7 +56,7 @@ struct App {
 impl App {
     fn new(timeout: Duration) -> Self {
         let rand_select = rand::thread_rng().gen_range(0..3);
-        let s = shapes::ShapeSelect::select_from(rand_select);
+        let s = shapes::ShapeSelect::select_from(rand_select, Color::LightRed);
 
         Self {
             timeout,
@@ -198,6 +198,7 @@ impl App {
                 ShapeSelect::ZigZagSelect(z.clone().center(right, top, complete_perc))
             }
         };
+        let shape = shape.with_bgcolor(Color::DarkGray);
         let marker = self.shapes_selected.get_marker();
         Canvas::default()
             .block(Block::bordered())

@@ -16,13 +16,15 @@ These are the details of idea of where it can go next
 - [X] animation zigzag
 - [X] animation archimedean spiral
 - [ ] animation change depending on duration(long animation for long timeout)
-- [ ] overlay progression have a gray full animation to indicate progression
+- [X] overlay progression have a gray full animation to indicate progression
 - [ ] for long timeout make appropriate animation, have long vs short animation selection
-- [ ] have numbers symbols large for timeout
-- [ ] better timeout displaying
 - [X] select random animation
 - [X] select random marker that match the best
 
+## font letter/number
+reaseach how font work, how can we import font to display on terminal
+- [ ] have numbers symbols large for timeout
+- [ ] better timeout displaying
 
 ## music player
 - [ ] how to integrate spotify api or something play with a given time?

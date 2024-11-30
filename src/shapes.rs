@@ -16,12 +16,12 @@ pub enum ShapeSelect {
 }
 
 impl ShapeSelect {
-    pub fn select_from(select: u32) -> Self {
+    pub fn select_from(select: u32, c: Color) -> Self {
         match select {
-            0 => Self::ArcSelect(Arc::new(8, Color::Red)),
-            1 => Self::SpiralSelect(Spiral::new(Color::Red)),
-            2 => Self::ZigZagSelect(ZigZag::new(5, Color::Red)),
-            _ => Self::SpiralSelect(Spiral::new(Color::Red)), //TODO: have something more smart here
+            0 => Self::ArcSelect(Arc::new(8, c)),
+            1 => Self::SpiralSelect(Spiral::new(c)),
+            2 => Self::ZigZagSelect(ZigZag::new(5, c)),
+            _ => Self::SpiralSelect(Spiral::new(c)), //TODO: have something more smart here
         }
     }
     pub fn get_marker(&self) -> symbols::Marker {
@@ -29,6 +29,13 @@ impl ShapeSelect {
             ShapeSelect::ArcSelect(_) => Arc::get_marker(),
             ShapeSelect::SpiralSelect(_) => Spiral::get_marker(),
             ShapeSelect::ZigZagSelect(_) => ZigZag::get_marker(),
+        }
+    }
+    pub fn with_bgcolor(self, bg: Color) -> Self {
+        match self {
+            ShapeSelect::ArcSelect(s) => ShapeSelect::ArcSelect(s.with_bgcolor(bg)),
+            ShapeSelect::SpiralSelect(s) => ShapeSelect::SpiralSelect(s.with_gbcolor(bg)),
+            ShapeSelect::ZigZagSelect(s) => ShapeSelect::ZigZagSelect(s.with_gbcolor(bg)),
         }
     }
 }
@@ -51,6 +58,7 @@ pub struct Arc {
     pub thickness: usize,
     pub arc_perc: f64, // percentage arc 0 to 100
     pub color: Color,
+    pub bgcolor: Option<Color>,
 }
 
 impl Arc {
@@ -62,7 +70,12 @@ impl Arc {
             thickness,
             arc_perc: 0.0,
             color,
+            bgcolor: None,
         }
+    }
+    pub fn with_bgcolor(mut self, bg: Color) -> Self {
+        self.bgcolor = Some(bg);
+        self
     }
 
     pub fn get_marker() -> symbols::Marker {
@@ -77,14 +90,27 @@ impl Arc {
             thickness: self.thickness,
             arc_perc,
             color: self.color,
+            bgcolor: self.bgcolor,
         }
     }
 }
 
 impl Shape for Arc {
     fn draw(&self, painter: &mut Painter<'_, '_>) {
+        if let Some(c) = self.bgcolor {
+            for t in 0..self.thickness {
+                let radius = self.radius.sub(t as f64);
+                for angle in 0..360 {
+                    let radians = f64::from(angle).to_radians();
+                    let circle_x = radius.mul_add(radians.cos(), self.x);
+                    let circle_y = radius.mul_add(radians.sin(), self.y);
+                    if let Some((x, y)) = painter.get_point(circle_x, circle_y) {
+                        painter.paint(x, y, c);
+                    }
+                }
+            }
+        }
         let arc_completion = (self.arc_perc) * 360.0;
-
         let arc_completion = arc_completion as u32;
         for t in 0..self.thickness {
             let radius = self.radius.sub(t as f64);
@@ -108,6 +134,7 @@ pub struct ZigZag {
     pub gap: usize,
     pub fill_perc: f64, // this is a percentage
     pub color: Color,
+    pub bgcolor: Option<Color>,
 }
 
 impl ZigZag {
@@ -119,10 +146,16 @@ impl ZigZag {
             gap,
             fill_perc: 0.0,
             color,
+            bgcolor: None,
         }
     }
     pub fn get_marker() -> symbols::Marker {
         symbols::Marker::HalfBlock
+    }
+
+    pub fn with_gbcolor(mut self, bg: Color) -> Self {
+        self.bgcolor = Some(bg);
+        self
     }
 
     pub fn center(self, width: f64, height: f64, fill_perc: f64) -> Self {
@@ -139,13 +172,12 @@ impl ZigZag {
             gap: self.gap,
             fill_perc,
             color: self.color,
+            bgcolor: self.bgcolor,
         }
     }
-}
 
-impl Shape for ZigZag {
-    fn draw(&self, painter: &mut Painter<'_, '_>) {
-        let fill_limit = (self.fill_perc * (self.size + self.gap as f64).powi(2)) as usize;
+    fn drawfill(&self, painter: &mut Painter<'_, '_>, fill_per: f64, c: Color) {
+        let fill_limit = (fill_per * (self.size + self.gap as f64).powi(2)) as usize;
         let mut filled = 0;
 
         // rust 101 for the noob! filled and painter variable are owned by this
@@ -158,7 +190,7 @@ impl Shape for ZigZag {
             if let Some((zx, zy)) =
                 painter.get_point((x + self.x as usize) as f64, (y + self.y as usize) as f64)
             {
-                painter.paint(zx, zy, self.color);
+                painter.paint(zx, zy, c);
             }
             true
         };
@@ -202,10 +234,6 @@ impl Shape for ZigZag {
                 dy = dy.saturating_sub(1);
             }
 
-            // if d + offset_x + self.gap > size + offset_x {
-            //     break;
-            // }
-
             for g in 1..self.gap {
                 let (x, y) = if going_up {
                     (d + g, size)
@@ -220,6 +248,15 @@ impl Shape for ZigZag {
     }
 }
 
+impl Shape for ZigZag {
+    fn draw(&self, painter: &mut Painter<'_, '_>) {
+        if let Some(c) = self.bgcolor {
+            self.drawfill(painter, 1.0, c);
+        }
+        self.drawfill(painter, self.fill_perc, self.color);
+    }
+}
+
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Spiral {
     pub x: f64,
@@ -227,6 +264,7 @@ pub struct Spiral {
     pub radius: f64,
     pub completion_perc: f64, // percentage arc 0 to 100
     pub color: Color,
+    pub bgcolor: Option<Color>,
 }
 
 impl Spiral {
@@ -237,6 +275,7 @@ impl Spiral {
             radius: 0.0,
             completion_perc: 0.0,
             color,
+            bgcolor: None,
         }
     }
 
@@ -247,22 +286,26 @@ impl Spiral {
             radius: width.min(height).div(2.0),
             completion_perc: arc_perc,
             color: self.color,
+            bgcolor: self.bgcolor,
         }
+    }
+
+    pub fn with_gbcolor(mut self, bg: Color) -> Self {
+        self.bgcolor = Some(bg);
+        self
     }
 
     pub fn get_marker() -> symbols::Marker {
         symbols::Marker::HalfBlock
     }
-}
 
-impl Shape for Spiral {
-    fn draw(&self, painter: &mut Painter<'_, '_>) {
+    fn drawfill(&self, painter: &mut Painter<'_, '_>, fill: f64, c: Color) {
         // Archimedean spiral: r =  a + b*theta
 
         let a = -self.radius;
         let b = 1.0;
         let range = -a / (b * PI as f64);
-        let range = (180.0 * range * self.completion_perc) as u32;
+        let range = (180.0 * range * fill) as u32;
         for angle in 0..range {
             let radians = f64::from(angle).to_radians();
             let radius = a + (b * radians);
@@ -271,8 +314,18 @@ impl Shape for Spiral {
             let circle_x = radius.mul_add(radians.cos(), self.x);
             let circle_y = radius.mul_add(radians.sin(), self.y);
             if let Some((x, y)) = painter.get_point(circle_x, circle_y) {
-                painter.paint(x, y, self.color);
+                painter.paint(x, y, c);
             }
         }
+    }
+}
+
+impl Shape for Spiral {
+    fn draw(&self, painter: &mut Painter<'_, '_>) {
+        if let Some(c) = self.bgcolor {
+            self.drawfill(painter, 1.0, c);
+        }
+
+        self.drawfill(painter, self.completion_perc, self.color);
     }
 }
