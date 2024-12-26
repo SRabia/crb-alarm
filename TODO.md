@@ -27,11 +27,18 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] better timeout displaying
 
 ## music player
-- [ ] how to integrate spotify api or something play with a given time?
+- [X] how to integrate spotify api or something play with a given time?
 - [ ] start music
 - [ ] stop music
 - [ ] increase volume as timeout reaching 0 
 - [ ] stop music when timeout increase after reach 0
+ 
+ ## spotify
+- [ ] genrate code refactor to separe the animation widget from main.
+- [ ] rework the layout to have a split vertical( dynamic when connected)
+- [ ] have a connect to spotify "kind of button" to connect
+- [ ] make the info log from rspotify to redirect to a file
+- [ ] the client id and secret need to be inject from client have a prompt with indicatation on how to do it.
  
  ## control
 - [ ] have a start stop key binding
@@ -45,7 +52,7 @@ reaseach how font work, how can we import font to display on terminal
 
 ## genral improvement and things
 - [ ] animation circle sucks with large timeout
-- [ ] in general the application is slow less than 30fps(on my shitty laptop though)
+- [ ] in general the application is slow less than 30fps(on my shitty laptop though) this is because it debug mode!
 - [ ] write the readme and explain 
 - [ ] not stable, it crash when increase/reduce time
 - [ ] test on different os/platform look like audio is not working smooth on all platform
@@ -54,11 +61,10 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] zig zag is glitchy pattern is off the screen
 
 ## research
-- [ ] spotify api how it work? is it possible?
+- [X] spotify api how it work? is it possible?
 - [ ] can this work on embedd? with a serial comm TUI? probably need to reseach crossterm
 
 
 
 # important note here!
 figure out at least something uselful with this because the whole idea is kind of lame and useless..
-wtf am I doing with my life..

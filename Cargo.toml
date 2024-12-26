@@ -14,3 +14,10 @@ rand = "0.8.5"
 rust-embed = "8.5.0"
 
 
+# cargo run --example pagination_sync --features="env-file cli client-ureq ureq-rustls-tls" --no-default-features
+# spotify
+rspotify = {version = "0.13.3", features = ["env-file", "cli", "client-ureq", "ureq-rustls-tls"], default-features = false}
+# env_logger = { version = "0.11.0", default-features = false }
+# tokio = { version = "1.11.0", features = ["rt-multi-thread", "macros"] }
+
+

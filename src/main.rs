@@ -15,6 +15,7 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 
+use cbr_alarm::spoty;
 use rust_embed::RustEmbed;
 use std::time::{Duration, Instant};
 
@@ -38,10 +39,11 @@ fn main() -> Result<()> {
             cli::Commands::Timeout(t) => t.parse().unwrap(),
         };
     }
+    let spoty = spoty::SpotiApi::new();
 
     color_eyre::install()?;
     let terminal = ratatui::init();
-    let app_result = App::new(tm_s).run(terminal);
+    let app_result = App::new(tm_s, spoty).run(terminal);
     ratatui::restore();
     app_result
 }
@@ -51,10 +53,11 @@ struct App {
     remaining: Duration,
     fps: fps::Fps,
     shapes_selected: ShapeSelect,
+    spoty_api: spoty::SpotiApi,
 }
 
 impl App {
-    fn new(timeout: Duration) -> Self {
+    fn new(timeout: Duration, spoty_api: spoty::SpotiApi) -> Self {
         let rand_select = rand::thread_rng().gen_range(0..3);
         let s = shapes::ShapeSelect::select_from(rand_select, Color::LightRed);
 
@@ -63,6 +66,7 @@ impl App {
             remaining: timeout,
             fps: fps::Fps::default(),
             shapes_selected: s,
+            spoty_api,
         }
     }
 
@@ -133,16 +137,23 @@ impl App {
             )
             .border_set(border::THICK);
 
-        let (h, m, s) = format_duration(self.remaining);
+        // let (h, m, s) = format_duration(self.remaining);
 
-        let timeout = if h > 0 {
-            format!("{}:{}:{}", h, m, s)
-        } else {
-            format!("{}:{}", m, s)
-        };
+        // let timeout = if h > 0 {
+        //     format!("{}:{}:{}", h, m, s)
+        // } else {
+        //     format!("{}:{}", m, s)
+        // };
+
+        let timeout = format!("sptoy {:?}", self.spoty_api.get_user_info());
+        // TODO: temp high jack this to debug spoty
+        // let timeout_text = Text::from(vec![
+        //     Line::from(" Time Left: ").centered(),
+        //     Line::from(timeout.yellow()),
+        // ])
 
         let timeout_text = Text::from(vec![
-            Line::from(" Time Left: ").centered(),
+            Line::from("spoty ").centered(),
             Line::from(timeout.yellow()),
         ])
         .centered();
