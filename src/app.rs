@@ -1,19 +1,19 @@
 use crate::anime;
 use crate::fps;
 use crate::shapes;
+use crate::theme;
 use color_eyre::Result;
 use rand::Rng;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode},
     layout::{self, Constraint, Flex, Layout, Rect},
-    style::{Color, Stylize},
+    style::{Color, Style, Stylize},
     symbols::border,
-    text::{Line, Text, ToSpan},
-    widgets::{block::Title, Block, Paragraph, Widget},
+    text::{Line, Span, ToSpan},
+    widgets::{block::Title, Block, Widget},
     DefaultTerminal, Frame,
 };
 
-use crate::spoty;
 use rust_embed::RustEmbed;
 use std::time::{Duration, Instant};
 
@@ -23,14 +23,14 @@ struct Asset;
 
 pub struct App {
     fps: fps::Fps,
-    spoty_api: spoty::SpotiApi,
     tm_animation: anime::AnimChrono,
 }
 
+const DARK_BLUE: Color = Color::Rgb(16, 24, 48);
+
 impl App {
     //TODO: timeout should be an option, don't play animation of None
-    //TODO: spoty should be music ui widget and create at init
-    pub fn new(timeout: Duration, spoty_api: spoty::SpotiApi) -> Self {
+    pub fn new(timeout: Duration) -> Self {
         //TODO: move this to main should come from user config
         let rand_select = rand::thread_rng().gen_range(0..3);
         let s = shapes::ShapeSelect::select_from(rand_select, Color::LightRed);
@@ -38,20 +38,8 @@ impl App {
         Self {
             fps: fps::Fps::default(),
             tm_animation: anime::AnimChrono::new(s, timeout),
-            spoty_api,
         }
     }
-
-    // /// Run the app until the user quits.
-    // pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
-    //     while self.is_running() {
-    //         terminal
-    //             .draw(|frame| self.draw(frame))
-    //             .wrap_err("terminal.draw")?;
-    //         self.handle_events()?;
-    //     }
-    //     Ok(())
-    // }
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
         let tick_rate = Duration::from_millis(16);
@@ -92,76 +80,85 @@ impl App {
     }
 
     fn get_tm_info_widget(&self) -> impl Widget + '_ {
-        let title = Title::from("Timeout Chrono".bold());
-        let instructions = Title::from(Line::from(vec![
-            //todo: bad render here use mult line
-            "one more second ".into(),
-            "<Left>".blue().bold(),
-            " 1 less second ".into(),
-            "<Right>".blue().bold(),
-            " Quit ".into(),
-            "<q>".red().bold(),
-        ]));
-        let block = Block::bordered()
-            .title(title.alignment(ratatui::layout::Alignment::Center))
-            .title(
-                instructions
-                    .alignment(ratatui::layout::Alignment::Center)
-                    .position(ratatui::widgets::block::Position::Bottom),
-            )
-            .border_set(border::THICK);
+        let timeout_rem = get_time_left_formated(&self.tm_animation.remaining);
+        let timeout_total = get_time_left_formated(&self.tm_animation.timeout);
 
-        let (h, m, s) = self.tm_animation.get_time_left_formated();
-
-        let timeout = if h > 0 {
-            format!("{}:{}:{}", h, m, s)
-        } else {
-            format!("{}:{}", m, s)
-        };
-
-        // let timeout = format!("sptoy {:?}", self.spoty_api.get_user_info());
-        // TODO: temp high jack this to debug spoty
-        let timeout_text = Text::from(vec![
-            Line::from(" Time Left: ").centered(),
-            Line::from(timeout.yellow()),
-        ])
-        .centered();
-
-        Paragraph::new(timeout_text).centered().block(block)
+        let complete_perc = self.tm_animation.remaining.as_millis() as f64
+            / self.tm_animation.timeout.as_millis() as f64;
+        let complete_perc = format!("{:.3}%", (1.0 - complete_perc) * 100.0);
+        let keys = [
+            ("Time Left", timeout_rem.as_str()),
+            ("Total Duration", timeout_total.as_str()),
+        ];
+        let key_style = Style::new().fg(theme::BLACK).bg(theme::DARK_GRAY);
+        let val_style = Style::new().fg(theme::DARK_GRAY).bg(theme::BLACK);
+        let mut spans: Vec<Span> = keys
+            .iter()
+            .flat_map(|(key, desc)| {
+                let key = Span::styled(format!(" {key} "), key_style);
+                let desc = Span::styled(format!(" {desc} "), val_style);
+                [key, desc]
+            })
+            .collect();
+        spans.push(Span::styled(
+            complete_perc,
+            Style::new().fg(theme::LIGHT_YELLOW).bg(theme::DARK_GRAY),
+        ));
+        Line::from(spans)
+            .centered()
+            .style((Color::Indexed(236), Color::Indexed(232)))
     }
 
     fn draw(&self, frame: &mut Frame) {
         let area = frame.area();
-        frame.render_widget(&self.tm_animation, area);
+        let vertical = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(0),
+            Constraint::Length(1),
+        ]);
+        let [title_bar, animation, bottom_bar] = vertical.areas(area);
 
-        // frame.render_widget(self.get_tm_animation_widget(area), area);
-        let area_chrono = get_center_area(area, 20, 10);
-        frame.render_widget(self.get_tm_info_widget(), area_chrono);
+        let main_frame = Block::new()
+            .style(Style::new().bg(DARK_BLUE))
+            .title(Title::from(format!("{}x{}", area.width, area.height)));
+        frame.render_widget(main_frame, area);
+
+        frame.render_widget(self.get_tm_info_widget(), title_bar);
+        frame.render_widget(&self.tm_animation, animation);
+
         let message_fps = format!("{:.2} FPS", self.fps.fps());
         let title_fps = Title::from(message_fps.to_span().dim())
             .alignment(layout::Alignment::Left)
             .position(ratatui::widgets::block::Position::Top);
 
-        let complete_perc = self.tm_animation.remaining.as_millis() as f64
-            / self.tm_animation.timeout.as_millis() as f64;
-        let complete_perc = 1.0 - complete_perc;
-        let block_info = Block::bordered()
-            .title(
-                Title::from(format!(
-                    "{}x{} -> {}x{} rem {:.3}",
-                    area.width,
-                    area.height,
-                    self.tm_animation.remaining.as_secs(),
-                    self.tm_animation.timeout.as_secs(),
-                    complete_perc
-                ))
-                .alignment(ratatui::layout::Alignment::Right)
-                .position(ratatui::widgets::block::Position::Bottom),
-            )
-            .title(title_fps)
-            .border_set(border::THICK);
-        frame.render_widget(block_info, area);
+        let block_info = Block::bordered().title(title_fps).border_set(border::THICK);
+        frame.render_widget(block_info, animation);
+        frame.render_widget(render_bottom_bar(), bottom_bar);
     }
+}
+
+fn render_bottom_bar() -> impl Widget + 'static {
+    let keys = [
+        ("h/←", "Sub 1s"),
+        ("l/→", "Add 1s"),
+        ("k/↑", "Add 1m"),
+        ("j/↓", "Sub 1m"),
+        ("r", "Reset time"),
+        ("q", "Quit"),
+    ];
+    let key_style = Style::new().fg(theme::BLACK).bg(theme::DARK_GRAY);
+    let desc_style = Style::new().fg(theme::DARK_GRAY).bg(theme::BLACK);
+    let spans: Vec<Span> = keys
+        .iter()
+        .flat_map(|(key, desc)| {
+            let key = Span::styled(format!(" {key} "), key_style);
+            let desc = Span::styled(format!(" {desc} "), desc_style);
+            [key, desc]
+        })
+        .collect();
+    Line::from(spans)
+        .centered()
+        .style((Color::Indexed(236), Color::Indexed(232)))
 }
 
 fn get_center_area(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
@@ -190,4 +187,17 @@ fn timeout_complete() {
         sink.append(source);
         sink.sleep_until_end();
     });
+}
+
+pub fn get_time_left_formated(d: &Duration) -> String {
+    let m = d.as_secs() / 60;
+    let s = d.as_secs() % 60;
+    let h = d.as_secs() / 3600;
+    if h > 0 {
+        format!("{}h {}m {}s", h, m, s)
+    } else if m > 0 {
+        format!("{}m {}s", m, s)
+    } else {
+        format!("{}s", s)
+    }
 }

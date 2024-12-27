@@ -1,5 +1,6 @@
 use rspotify::{
-    model::PrivateUser, prelude::*, scopes, AuthCodePkceSpotify, Config, Credentials, OAuth,
+    model::PrivateUser, prelude::*, scopes, AuthCodePkceSpotify, ClientResult, Config, Credentials,
+    OAuth,
 };
 
 #[derive(Debug)]
@@ -34,12 +35,8 @@ impl SpotiApi {
             "user-read-recently-played"
         );
         let oauth = OAuth::from_env(scopes).unwrap();
-        let mut spotify = AuthCodePkceSpotify::with_config(creds.clone(), oauth.clone(), config);
+        let spotify = AuthCodePkceSpotify::with_config(creds.clone(), oauth.clone(), config);
 
-        // Obtaining the access token
-        let url = spotify.get_authorize_url(None).unwrap();
-        // This function requires the `cli` feature enabled.
-        spotify.prompt_for_token(&url).unwrap();
         Self { api: spotify }
 
         // Running the requests
@@ -85,6 +82,41 @@ impl SpotiApi {
 
     pub fn get_user_info(&self) -> PrivateUser {
         self.api.me().unwrap()
+    }
+
+    //TODO: remove, this is just for testing
+    pub fn testing_shit(&self) -> String {
+        "shit shit shit".to_string()
+    }
+
+    //TOTO: WIP this won't work need a tcp listener and tokio to make it non-blocking
+    //while waiting for input from user
+    //
+    pub fn try_auth(&mut self) -> ClientResult<()> {
+        let url = self.api.get_authorize_url(None).unwrap();
+        match self.api.read_token_cache(true) {
+            Ok(Some(new_token)) => {
+                let expired = new_token.is_expired();
+
+                *self.api.get_token().lock().unwrap() = Some(new_token);
+                if expired {
+                    match self.api.refetch_token()? {
+                        Some(refreshed_token) => {
+                            *self.api.get_token().lock().unwrap() = Some(refreshed_token)
+                        }
+                        None => {
+                            let code = self.api.get_code_from_user(&url)?;
+                            self.api.request_token(&code)?;
+                        }
+                    }
+                }
+            }
+            _ => {
+                let code = self.api.get_code_from_user(&url)?;
+                self.api.request_token(&code)?;
+            }
+        }
+        self.api.write_token_cache()
     }
 }
 

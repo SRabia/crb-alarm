@@ -3,7 +3,6 @@ use clap::Parser;
 use color_eyre::Result;
 
 use cbr_alarm::app;
-use cbr_alarm::spoty;
 use std::time::Duration;
 
 fn main() -> Result<()> {
@@ -15,11 +14,10 @@ fn main() -> Result<()> {
             cli::Commands::Timeout(t) => t.parse().unwrap(),
         };
     }
-    let spoty = spoty::SpotiApi::new();
 
     color_eyre::install()?;
     let terminal = ratatui::init();
-    let app_result = app::App::new(tm_s, spoty).run(terminal);
+    let app_result = app::App::new(tm_s).run(terminal);
     ratatui::restore();
     app_result
 }

@@ -11,6 +11,8 @@ CRB alarm
 after the first inital working skeleton, that I call the first sweep. just having the basic.
 These are the details of idea of where it can go next
 
+## async
+- [ ]  integrate tokio and make app async and event-based
 
 ## the animation
 - [X] animation zigzag
@@ -43,6 +45,7 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] have a connect to spotify "kind of button" to connect
 - [ ] make the info log from rspotify to redirect to a file
 - [ ] the client id and secret need to be injected from client have a prompt with indicatation on how to do it.
+- [ ] will have to go full async to simplify auth!
  
  ## control
 - [ ] have a start stop key binding

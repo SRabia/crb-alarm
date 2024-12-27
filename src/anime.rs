@@ -26,12 +26,6 @@ impl AnimChrono {
             complete: false,
         }
     }
-    pub fn get_time_left_formated(&self) -> (u64, u64, u64) {
-        let m = self.remaining.as_secs() / 60;
-        let s = self.remaining.as_secs() % 60;
-        let h = self.remaining.as_secs() / 3600;
-        (h, m, s)
-    }
 
     pub fn update<F>(&mut self, elapsed: Duration, cb_complete: F)
     where
@@ -51,6 +45,7 @@ impl AnimChrono {
 
     pub fn decrease_timeout(&mut self, tm: u64) {
         self.timeout = self.timeout.saturating_sub(Duration::new(tm, 0));
+        self.remaining = self.timeout;
         self.remaining = self.remaining.saturating_sub(Duration::new(tm, 0));
     }
 }
