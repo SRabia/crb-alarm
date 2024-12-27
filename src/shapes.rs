@@ -9,6 +9,7 @@ use ratatui::{
     widgets::canvas::{Painter, Shape},
 };
 
+#[derive(Debug)]
 pub enum ShapeSelect {
     ArcSelect(Arc),
     SpiralSelect(Spiral),

@@ -32,19 +32,23 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] stop music
 - [ ] increase volume as timeout reaching 0 
 - [ ] stop music when timeout increase after reach 0
+
+## general refactor
+- [X] separate module into different widget, app, chrono, ...
+- [ ] rework the layout ui better seperation of ui.
+- [ ] handle event with event better
+- [ ] configure the app with a configuration json: all random configurable
  
  ## spotify
-- [ ] genrate code refactor to separe the animation widget from main.
-- [ ] rework the layout to have a split vertical( dynamic when connected)
 - [ ] have a connect to spotify "kind of button" to connect
 - [ ] make the info log from rspotify to redirect to a file
-- [ ] the client id and secret need to be inject from client have a prompt with indicatation on how to do it.
+- [ ] the client id and secret need to be injected from client have a prompt with indicatation on how to do it.
  
  ## control
 - [ ] have a start stop key binding
 - [ ] have a option, arg to play music during time or after time
 - [ ] play crb snipped on some control 
-- [ ] better increase /decrese timeout that sync better with animation
+- [ ] better increase /decrease timeout that sync better with animation
 
 
 ## the fucking github workflow..
@@ -66,5 +70,3 @@ reaseach how font work, how can we import font to display on terminal
 
 
 
-# important note here!
-figure out at least something uselful with this because the whole idea is kind of lame and useless..
