@@ -40,7 +40,9 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] rework the layout ui better seperation of ui.
 - [ ] handle event with event better
 - [ ] configure the app with a configuration json: all random configurable
- 
+## event
+- [ ] need to handle event depending on context, with tab? or focus?
+
  ## spotify
 - [ ] have a connect to spotify "kind of button" to connect
 - [ ] make the info log from rspotify to redirect to a file
@@ -63,6 +65,7 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] write the readme and explain 
 - [ ] not stable, it crash when increase/reduce time
 - [ ] test on different os/platform look like audio is not working smooth on all platform
+- [ ] Theme module to get all color from eventually configurable
 
 ## bug to fix maybe
 - [ ] zig zag is glitchy pattern is off the screen
