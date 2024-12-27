@@ -142,13 +142,18 @@ impl App {
             .alignment(layout::Alignment::Left)
             .position(ratatui::widgets::block::Position::Top);
 
+        let complete_perc = self.tm_animation.remaining.as_millis() as f64
+            / self.tm_animation.timeout.as_millis() as f64;
+        let complete_perc = 1.0 - complete_perc;
         let block_info = Block::bordered()
             .title(
                 Title::from(format!(
-                    "{}x{} -> {}",
+                    "{}x{} -> {}x{} rem {:.3}",
                     area.width,
                     area.height,
-                    f64::from(area.height).mul_add(2.0, -4.0)
+                    self.tm_animation.remaining.as_secs(),
+                    self.tm_animation.timeout.as_secs(),
+                    complete_perc
                 ))
                 .alignment(ratatui::layout::Alignment::Right)
                 .position(ratatui::widgets::block::Position::Bottom),

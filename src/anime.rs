@@ -12,9 +12,9 @@ use std::time::Duration;
 #[derive(Debug)]
 pub struct AnimChrono {
     shapes_selected: ShapeSelect,
-    timeout: Duration, // todo: use u64 msecs
-    remaining: Duration,
-    pub complete: bool,
+    pub timeout: Duration, // todo: use u64 msecs
+    pub remaining: Duration,
+    complete: bool,
 }
 
 impl AnimChrono {
@@ -43,14 +43,15 @@ impl AnimChrono {
             cb_complete();
         }
     }
+
     pub fn increase_timeout(&mut self, tm: u64) {
         self.timeout = self.timeout.saturating_add(Duration::new(tm, 0));
-        self.remaining = self.timeout.saturating_add(Duration::new(tm, 0));
+        self.remaining = self.remaining.saturating_add(Duration::new(tm, 0));
     }
 
     pub fn decrease_timeout(&mut self, tm: u64) {
         self.timeout = self.timeout.saturating_sub(Duration::new(tm, 0));
-        self.remaining = self.timeout.saturating_sub(Duration::new(tm, 0));
+        self.remaining = self.remaining.saturating_sub(Duration::new(tm, 0));
     }
 }
 
