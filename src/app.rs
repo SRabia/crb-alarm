@@ -179,8 +179,6 @@ impl App {
         let horizontal = Layout::horizontal([Constraint::Percentage(30), Constraint::Min(0)]);
         let [title_bar, main_area, bottom_bar] = vertical.areas(area);
 
-        frame.render_widget(self.get_tm_info_widget(), title_bar);
-        frame.render_widget(render_bottom_bar(), bottom_bar);
         let main_frame = Block::new()
             .style(Style::new().bg(DARK_BLUE))
             .title(Title::from(format!("{}x{}", area.width, area.height)));
@@ -204,6 +202,8 @@ impl App {
             }
             _ => {}
         }
+        frame.render_widget(render_bottom_bar(), bottom_bar);
+        frame.render_widget(self.get_tm_info_widget(), title_bar);
     }
 }
 
