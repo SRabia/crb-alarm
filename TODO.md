@@ -40,8 +40,10 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] rework the layout ui better seperation of ui.
 - [ ] handle event with event better
 - [ ] configure the app with a configuration json: all random configurable
+- [ ] 
 ## event
-- [ ] need to handle event depending on context, with tab? or focus?
+- [ ] refator event handle with context
+- [ ] have a command list module depending on command selected event change 
 
  ## spotify
 - [ ] have a connect to spotify "kind of button" to connect
@@ -73,6 +75,4 @@ reaseach how font work, how can we import font to display on terminal
 ## research
 - [X] spotify api how it work? is it possible?
 - [ ] can this work on embedd? with a serial comm TUI? probably need to reseach crossterm
-
-
 

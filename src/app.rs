@@ -5,7 +5,7 @@ use crate::theme;
 use color_eyre::Result;
 use rand::Rng;
 use ratatui::{
-    crossterm::event::{self, Event, KeyCode},
+    crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
     layout::{self, Constraint, Flex, Layout, Rect},
     style::{Color, Style, Stylize},
     symbols::border,
@@ -14,6 +14,7 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 
+use crate::command_list;
 use rust_embed::RustEmbed;
 use std::time::{Duration, Instant};
 
@@ -21,9 +22,18 @@ use std::time::{Duration, Instant};
 #[folder = "assets/"]
 struct Asset;
 
+#[derive(Debug, PartialEq)]
+enum AppState {
+    Main,
+    CmdSelect,
+    Quit,
+}
+
 pub struct App {
     fps: fps::Fps,
     tm_animation: anime::AnimChrono,
+    cmds: command_list::Cmd,
+    state: AppState,
 }
 
 const DARK_BLUE: Color = Color::Rgb(16, 24, 48);
@@ -38,13 +48,77 @@ impl App {
         Self {
             fps: fps::Fps::default(),
             tm_animation: anime::AnimChrono::new(s, timeout),
+            cmds: command_list::Cmd::default(),
+            state: AppState::Main,
         }
     }
 
-    pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
+    //TODO: here need a event_handler!
+    //from there dispach to proper module
+    //module: Control timing
+    //module: authentification
+    // OR: we can do Like htop ???
+
+    fn handle_event_main(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Char('q') => {
+                self.state = AppState::Quit;
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.tm_animation.decrease_timeout(60);
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.tm_animation.increase_timeout(60);
+            }
+            KeyCode::Right | KeyCode::Char('l') => {
+                self.tm_animation.increase_timeout(1);
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                self.tm_animation.decrease_timeout(1);
+            }
+            KeyCode::Char('p') => {
+                if key.modifiers == KeyModifiers::CONTROL {
+                    self.state = AppState::CmdSelect;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_event_cmd_select(&mut self, key: KeyEvent) {
+        if key.kind != KeyEventKind::Press {
+            return;
+        }
+        match key.code {
+            KeyCode::Char('q') => self.state = AppState::Main,
+            KeyCode::Char('h') | KeyCode::Left => self.cmds.select_none(),
+            KeyCode::Char('j') | KeyCode::Down => self.cmds.select_next(),
+            KeyCode::Char('k') | KeyCode::Up => self.cmds.select_previous(),
+            KeyCode::Char('g') | KeyCode::Home => self.cmds.select_first(),
+            KeyCode::Char('G') | KeyCode::End => self.cmds.select_last(),
+            KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
+                self.cmds.toggle_status();
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_event(&mut self, key: KeyEvent) {
+        match self.state {
+            AppState::Main => {
+                self.handle_event_main(key);
+            }
+            AppState::CmdSelect => {
+                self.handle_event_cmd_select(key);
+            }
+            _ => {}
+        }
+    }
+
+    pub fn run(&mut self, mut terminal: DefaultTerminal) -> Result<()> {
         let tick_rate = Duration::from_millis(16);
         let mut last_tick = Instant::now();
-        loop {
+        while self.state != AppState::Quit {
             self.fps.update();
             terminal.draw(|frame| self.draw(frame))?;
             // timeout = 16 - loop_interval
@@ -52,22 +126,7 @@ impl App {
             if event::poll(interval_tick)? {
                 // block for 16ms
                 if let Event::Key(key) = event::read()? {
-                    match key.code {
-                        KeyCode::Char('q') => break Ok(()),
-                        KeyCode::Down | KeyCode::Char('j') => {
-                            self.tm_animation.decrease_timeout(60);
-                        }
-                        KeyCode::Up | KeyCode::Char('k') => {
-                            self.tm_animation.increase_timeout(60);
-                        }
-                        KeyCode::Right | KeyCode::Char('l') => {
-                            self.tm_animation.increase_timeout(1);
-                        }
-                        KeyCode::Left | KeyCode::Char('h') => {
-                            self.tm_animation.decrease_timeout(1);
-                        }
-                        _ => {}
-                    }
+                    self.handle_event(key);
                 }
             }
 
@@ -77,6 +136,7 @@ impl App {
                 self.tm_animation.update(elapsed, timeout_complete);
             }
         }
+        Ok(())
     }
 
     fn get_tm_info_widget(&self) -> impl Widget + '_ {
@@ -109,31 +169,41 @@ impl App {
             .style((Color::Indexed(236), Color::Indexed(232)))
     }
 
-    fn draw(&self, frame: &mut Frame) {
+    fn draw(&mut self, frame: &mut Frame) {
         let area = frame.area();
         let vertical = Layout::vertical([
             Constraint::Length(1),
             Constraint::Min(0),
             Constraint::Length(1),
         ]);
-        let [title_bar, animation, bottom_bar] = vertical.areas(area);
+        let horizontal = Layout::horizontal([Constraint::Percentage(30), Constraint::Min(0)]);
+        let [title_bar, main_area, bottom_bar] = vertical.areas(area);
 
+        frame.render_widget(self.get_tm_info_widget(), title_bar);
+        frame.render_widget(render_bottom_bar(), bottom_bar);
         let main_frame = Block::new()
             .style(Style::new().bg(DARK_BLUE))
             .title(Title::from(format!("{}x{}", area.width, area.height)));
         frame.render_widget(main_frame, area);
 
-        frame.render_widget(self.get_tm_info_widget(), title_bar);
-        frame.render_widget(&self.tm_animation, animation);
-
         let message_fps = format!("{:.2} FPS", self.fps.fps());
         let title_fps = Title::from(message_fps.to_span().dim())
             .alignment(layout::Alignment::Left)
             .position(ratatui::widgets::block::Position::Top);
-
         let block_info = Block::bordered().title(title_fps).border_set(border::THICK);
-        frame.render_widget(block_info, animation);
-        frame.render_widget(render_bottom_bar(), bottom_bar);
+        match self.state {
+            AppState::Main => {
+                frame.render_widget(&self.tm_animation, main_area);
+                frame.render_widget(block_info, main_area);
+            }
+            AppState::CmdSelect => {
+                let [cmd_list_area, animation_area] = horizontal.areas(main_area);
+                frame.render_widget(&mut self.cmds, cmd_list_area);
+                frame.render_widget(&self.tm_animation, animation_area);
+                frame.render_widget(block_info, animation_area);
+            }
+            _ => {}
+        }
     }
 }
 
