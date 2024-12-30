@@ -1,7 +1,6 @@
 pub mod anime;
 pub mod app;
 pub mod cli;
-pub mod command_list;
 pub mod fps;
 pub mod music_player;
 pub mod shapes;

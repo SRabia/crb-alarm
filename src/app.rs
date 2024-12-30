@@ -6,7 +6,7 @@ use color_eyre::Result;
 use rand::Rng;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-    layout::{self, Constraint, Flex, Layout, Rect},
+    layout::{self, Constraint, Layout, Rect},
     style::{Color, Style, Stylize},
     symbols::border,
     text::{Line, Span, ToSpan},
@@ -14,7 +14,7 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 
-use crate::command_list;
+use crate::music_player;
 use rust_embed::RustEmbed;
 use std::time::{Duration, Instant};
 
@@ -32,7 +32,7 @@ enum AppState {
 pub struct App {
     fps: fps::Fps,
     tm_animation: anime::AnimChrono,
-    cmds: command_list::Cmd,
+    player: music_player::MusicPlayer,
     state: AppState,
 }
 
@@ -48,7 +48,7 @@ impl App {
         Self {
             fps: fps::Fps::default(),
             tm_animation: anime::AnimChrono::new(s, timeout),
-            cmds: command_list::Cmd::default(),
+            player: music_player::MusicPlayer::default(),
             state: AppState::Main,
         }
     }
@@ -85,19 +85,19 @@ impl App {
         }
     }
 
-    fn handle_event_cmd_select(&mut self, key: KeyEvent) {
+    fn handle_event_player(&mut self, key: KeyEvent) {
         if key.kind != KeyEventKind::Press {
             return;
         }
         match key.code {
             KeyCode::Char('q') => self.state = AppState::Main,
-            KeyCode::Char('h') | KeyCode::Left => self.cmds.select_none(),
-            KeyCode::Char('j') | KeyCode::Down => self.cmds.select_next(),
-            KeyCode::Char('k') | KeyCode::Up => self.cmds.select_previous(),
-            KeyCode::Char('g') | KeyCode::Home => self.cmds.select_first(),
-            KeyCode::Char('G') | KeyCode::End => self.cmds.select_last(),
+            KeyCode::Char('h') | KeyCode::Left => self.player.select_none(),
+            KeyCode::Char('j') | KeyCode::Down => self.player.select_next(),
+            KeyCode::Char('k') | KeyCode::Up => self.player.select_previous(),
+            KeyCode::Char('g') | KeyCode::Home => self.player.select_first(),
+            KeyCode::Char('G') | KeyCode::End => self.player.select_last(),
             KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
-                self.cmds.toggle_status();
+                // self.player.enter_command();
             }
             _ => {}
         }
@@ -109,7 +109,7 @@ impl App {
                 self.handle_event_main(key);
             }
             AppState::CmdSelect => {
-                self.handle_event_cmd_select(key);
+                self.handle_event_player(key);
             }
             _ => {}
         }
@@ -195,8 +195,8 @@ impl App {
                 frame.render_widget(block_info, main_area);
             }
             AppState::CmdSelect => {
-                let [cmd_list_area, animation_area] = horizontal.areas(main_area);
-                frame.render_widget(&mut self.cmds, cmd_list_area);
+                let [list_area, animation_area] = horizontal.areas(main_area);
+                frame.render_widget(&mut self.player, list_area);
                 frame.render_widget(&self.tm_animation, animation_area);
                 frame.render_widget(block_info, animation_area);
             }
@@ -231,13 +231,13 @@ fn render_bottom_bar() -> impl Widget + 'static {
         .style((Color::Indexed(236), Color::Indexed(232)))
 }
 
-fn get_center_area(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
-    let vertical = Layout::vertical([Constraint::Percentage(percent_y)]).flex(Flex::Center);
-    let horizontal = Layout::horizontal([Constraint::Percentage(percent_x)]).flex(Flex::Center);
-    let [area] = vertical.areas(area);
-    let [area] = horizontal.areas(area);
-    area
-}
+// fn get_center_area(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
+//     let vertical = Layout::vertical([Constraint::Percentage(percent_y)]).flex(Flex::Center);
+//     let horizontal = Layout::horizontal([Constraint::Percentage(percent_x)]).flex(Flex::Center);
+//     let [area] = vertical.areas(area);
+//     let [area] = horizontal.areas(area);
+//     area
+// }
 
 fn timeout_complete() {
     let nb_sound_files = Asset::iter().count();
