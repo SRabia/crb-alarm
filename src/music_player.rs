@@ -9,8 +9,8 @@ use ratatui::{
     symbols,
     text::Line,
     widgets::{
-        Block, Borders, HighlightSpacing, List, ListItem, ListState, Paragraph, StatefulWidget,
-        Widget,
+        Block, Borders, HighlightSpacing, List, ListItem, ListState, Padding, Paragraph,
+        StatefulWidget, Widget, Wrap,
     },
 };
 
@@ -38,6 +38,7 @@ struct ActionList {
 struct ActionItem {
     action_name: String,
     action: SelfActionMethod,
+    result: String,
 }
 
 impl ActionItem {
@@ -45,13 +46,14 @@ impl ActionItem {
         Self {
             action_name: action_name.to_string(),
             action: f,
+            result: "".to_string(),
         }
     }
 }
 
 impl MusicPlayer {
     fn connect(&mut self) -> String {
-        "Hello".to_string()
+        "connected yeah".to_string()
     }
 
     pub fn new() -> Self {
@@ -84,7 +86,8 @@ impl MusicPlayer {
 
     pub fn do_action(&mut self) {
         if let Some(i) = self.list_action.state.selected() {
-            (self.list_action.items[i].action)(self);
+            let r = (self.list_action.items[i].action)(self);
+            self.list_action.items[i].result = r;
         }
     }
 }
@@ -114,12 +117,13 @@ impl Widget for &mut MusicPlayer {
         ])
         .areas(area);
 
-        let [list_area, _item_area] =
+        let [list_area, item_area] =
             Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(main_area);
 
         MusicPlayer::render_header(header_area, buf);
         MusicPlayer::render_footer(footer_area, buf);
         self.render_list(list_area, buf);
+        self.render_selected_item(item_area, buf);
     }
 }
 
@@ -169,33 +173,30 @@ impl MusicPlayer {
         StatefulWidget::render(list, area, buf, &mut self.list_action.state);
     }
 
-    // fn render_selected_item(&self, area: Rect, buf: &mut Buffer) {
-    //     // We get the info depending on the item's state.
-    //     let info = if let Some(i) = self.todo_list.state.selected() {
-    //         match self.todo_list.items[i].cmd {
-    //             Command::ConnectSpotify => format!("✓ DONE: {}", self.todo_list.items[i].info),
-    //             Command::Quit => format!("☐ TODO: {}", self.todo_list.items[i].info),
-    //         }
-    //     } else {
-    //         "Nothing selected...".to_string()
-    //     };
+    fn render_selected_item(&self, area: Rect, buf: &mut Buffer) {
+        // We get the info depending on the item's state.
+        let info = if let Some(i) = self.list_action.state.selected() {
+            self.list_action.items[i].result.as_str()
+        } else {
+            "No Result"
+        };
 
-    //     // We show the list item's info under the list in this paragraph
-    //     let block = Block::new()
-    //         .title(Line::raw("TODO Info").centered())
-    //         .borders(Borders::TOP)
-    //         .border_set(symbols::border::EMPTY)
-    //         .border_style(TODO_HEADER_STYLE)
-    //         .bg(NORMAL_ROW_BG)
-    //         .padding(Padding::horizontal(1));
+        // We show the list item's info under the list in this paragraph
+        let block = Block::new()
+            .title(Line::raw("TODO Info").centered())
+            .borders(Borders::TOP)
+            .border_set(symbols::border::EMPTY)
+            .border_style(TODO_HEADER_STYLE)
+            .bg(NORMAL_ROW_BG)
+            .padding(Padding::horizontal(1));
 
-    //     // We can now render the item info
-    //     Paragraph::new(info)
-    //         .block(block)
-    //         .fg(TEXT_FG_COLOR)
-    //         .wrap(Wrap { trim: false })
-    //         .render(area, buf);
-    // }
+        // We can now render the item info
+        Paragraph::new(info)
+            .block(block)
+            .fg(TEXT_FG_COLOR)
+            .wrap(Wrap { trim: false })
+            .render(area, buf);
+    }
 }
 
 const fn alternate_colors(i: usize) -> Color {
