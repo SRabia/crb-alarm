@@ -91,6 +91,7 @@ impl App {
             KeyCode::Char('g') | KeyCode::Home => self.player.select_first(),
             KeyCode::Char('G') | KeyCode::End => self.player.select_last(),
             KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
+                self.player.do_action();
                 // self.player.enter_command();
             }
             _ => {}

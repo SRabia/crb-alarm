@@ -3,7 +3,7 @@ use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
     style::{
-        palette::tailwind::{BLUE, GREEN, SLATE},
+        palette::tailwind::{BLUE, SLATE},
         Color, Modifier, Style, Stylize,
     },
     symbols,
@@ -19,39 +19,47 @@ const NORMAL_ROW_BG: Color = SLATE.c950;
 const ALT_ROW_BG_COLOR: Color = SLATE.c900;
 const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier::BOLD);
 const TEXT_FG_COLOR: Color = SLATE.c200;
-const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
+// const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
 
-#[derive(Debug)]
+type SelfActionMethod = fn(&mut MusicPlayer) -> String;
+
+// #[derive(Debug)]
 pub struct MusicPlayer {
     spoty_api: spoty::SpotiApi,
     list_action: ActionList,
 }
 
-#[derive(Debug)]
+// #[derive(Debug)]
 struct ActionList {
     items: Vec<ActionItem>,
     state: ListState,
 }
 
-#[derive(Debug)]
 struct ActionItem {
-    info: String,
+    action_name: String,
+    action: SelfActionMethod,
 }
 
 impl ActionItem {
-    fn new(info: &str) -> Self {
+    fn new(action_name: &str, f: SelfActionMethod) -> Self {
         Self {
-            info: info.to_string(),
+            action_name: action_name.to_string(),
+            action: f,
         }
     }
 }
 
 impl MusicPlayer {
+    fn connect(&mut self) -> String {
+        "Hello".to_string()
+    }
+
     pub fn new() -> Self {
         let spoty_api = spoty::SpotiApi::default();
+        let list_action_tuple = [("Connect to spotify", Self::connect as SelfActionMethod)];
         Self {
             spoty_api,
-            list_action: ActionList::from_iter([("Connect to spotify")]),
+            list_action: ActionList::from_iter(list_action_tuple),
         }
     }
 
@@ -73,11 +81,20 @@ impl MusicPlayer {
     pub fn select_last(&mut self) {
         self.list_action.state.select_last();
     }
+
+    pub fn do_action(&mut self) {
+        if let Some(i) = self.list_action.state.selected() {
+            (self.list_action.items[i].action)(self);
+        }
+    }
 }
 
-impl FromIterator<&'static str> for ActionList {
-    fn from_iter<I: IntoIterator<Item = &'static str>>(iter: I) -> Self {
-        let items = iter.into_iter().map(|info| ActionItem::new(info)).collect();
+impl FromIterator<(&'static str, SelfActionMethod)> for ActionList {
+    fn from_iter<I: IntoIterator<Item = (&'static str, SelfActionMethod)>>(iter: I) -> Self {
+        let items = iter
+            .into_iter()
+            .map(|(info, f)| ActionItem::new(info, f))
+            .collect();
         let state = ListState::default();
         Self { items, state }
     }
@@ -191,7 +208,7 @@ const fn alternate_colors(i: usize) -> Color {
 
 impl From<&ActionItem> for ListItem<'_> {
     fn from(value: &ActionItem) -> Self {
-        let line = Line::styled(format!(" ☐ {}", value.info), TEXT_FG_COLOR);
+        let line = Line::styled(format!(" ☐ {}", value.action_name), TEXT_FG_COLOR);
         // let line = match value.cmd {
         //     Command::ConnectSpotify => Line::styled(format!(" ☐ {}", value.todo), TEXT_FG_COLOR),
         //     // Command::Quit => Line::styled(format!(" ✓ {}", value.todo), COMPLETED_TEXT_FG_COLOR),
