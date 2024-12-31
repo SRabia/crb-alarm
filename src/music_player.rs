@@ -103,39 +103,6 @@ impl Widget for &mut MusicPlayer {
         MusicPlayer::render_header(header_area, buf);
         MusicPlayer::render_footer(footer_area, buf);
         self.render_list(list_area, buf);
-        // self.render_selected_item(item_area, buf);
-
-        // let title = Title::from("".bold());
-        // let instructions = Title::from(Line::from(vec![
-        //     //todo: bad render here use mult line
-        //     "Connect".into(),
-        //     "<C>".blue().bold(),
-        //     "Disconnect".into(),
-        //     "<D>".blue().bold(),
-        // ]));
-        // let block = Block::bordered()
-        //     .title(title.alignment(ratatui::layout::Alignment::Center))
-        //     .title(
-        //         instructions
-        //             .alignment(ratatui::layout::Alignment::Center)
-        //             .position(ratatui::widgets::block::Position::Bottom),
-        //     )
-        //     .border_set(border::THICK);
-
-        // let timeout = self.spoty_api.testing_shit();
-
-        // // let timeout = format!("sptoy {:?}", self.spoty_api.get_user_info());
-        // // TODO: temp high jack this to debug spoty
-        // let timeout_text = Text::from(vec![
-        //     Line::from(" Time Left: ").centered(),
-        //     Line::from(timeout.yellow()),
-        // ])
-        // .centered();
-
-        // Paragraph::new(timeout_text)
-        //     .centered()
-        //     .block(block)
-        //     .render(area, buf);
     }
 }
 

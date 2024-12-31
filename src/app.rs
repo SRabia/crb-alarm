@@ -53,12 +53,6 @@ impl App {
         }
     }
 
-    //TODO: here need a event_handler!
-    //from there dispach to proper module
-    //module: Control timing
-    //module: authentification
-    // OR: we can do Like htop ???
-
     fn handle_event_main(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Char('q') => {

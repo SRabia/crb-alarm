@@ -25,13 +25,13 @@ These are the details of idea of where it can go next
 
 ## font letter/number
 reaseach how font work, how can we import font to display on terminal
-- [ ] have numbers symbols large for timeout
-- [ ] better timeout displaying
+- [ ] have numbers symbols large for timeout: update check https://crates.io/crates/tui-big-text
+- [X] better timeout displaying
 
 ## music player
 - [X] how to integrate spotify api or something play with a given time?
-- [ ] start music
-- [ ] stop music
+- [ ] start music __easy__
+- [ ] stop music __easy__
 - [ ] increase volume as timeout reaching 0 
 - [ ] stop music when timeout increase after reach 0
 
@@ -40,25 +40,24 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] rework the layout ui better seperation of ui.
 - [ ] handle event with event better
 - [ ] configure the app with a configuration json: all random configurable
-- [ ] 
+
 ## event
 - [ ] refator event handle with context
-- [ ] have a command list module depending on command selected event change 
 
  ## spotify
-- [ ] have a connect to spotify "kind of button" to connect
-- [ ] make the info log from rspotify to redirect to a file
+- [ ] have a connect to spotify "kind of button" to connect: update ui part is done
+- [ ] make the info log from rspotify to redirect to a ui
 - [ ] the client id and secret need to be injected from client have a prompt with indicatation on how to do it.
 - [ ] will have to go full async to simplify auth!
  
  ## control
-- [ ] have a start stop key binding
+- [ ] have a start stop key binding __easy__
 - [ ] have a option, arg to play music during time or after time
 - [ ] play crb snipped on some control 
 - [ ] better increase /decrease timeout that sync better with animation
 
 
-## the fucking github workflow..
+## the github workflow..
 - [ ] workflow with git release a version.. I don't what to do with this mess
 
 ## genral improvement and things
@@ -67,6 +66,7 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] write the readme and explain 
 - [ ] not stable, it crash when increase/reduce time
 - [ ] test on different os/platform look like audio is not working smooth on all platform
+- [ ] collect all color theme into one module (theme) __easy__
 - [ ] Theme module to get all color from eventually configurable
 
 ## bug to fix maybe
@@ -75,4 +75,6 @@ reaseach how font work, how can we import font to display on terminal
 ## research
 - [X] spotify api how it work? is it possible?
 - [ ] can this work on embedd? with a serial comm TUI? probably need to reseach crossterm
+
+
 
