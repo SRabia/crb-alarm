@@ -261,6 +261,7 @@ dependencies = [
  "rodio",
  "rspotify",
  "rust-embed",
+ "webbrowser",
 ]
 
 [[package]]

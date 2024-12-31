@@ -118,6 +118,44 @@ impl SpotiApi {
         }
         self.api.write_token_cache()
     }
+
+    pub fn open_webbrowser_auth(&self, url: &str) -> ClientResult<String> {
+        use rspotify::ClientError;
+        use webbrowser;
+        match webbrowser::open(url) {
+            Ok(_) => Ok(format!("Opend {} in your browser.", url)),
+            Err(why) => Err(ClientError::Cli(format!(
+                "Error when trying to open an URL in your browser: {:?}. \
+                 Please navigate here manually: {}",
+                why, url
+            ))),
+        }
+    }
+
+    // fn get_code_from_user(&self, url: &str) -> ClientResult<String> {
+    //     use rspotify::ClientError;
+
+    //     // log::info!("Opening brower with auth URL");
+    //     match webbrowser::open(url) {
+    //         Ok(_) => println!("Opened {} in your browser.", url),
+    //         Err(why) => eprintln!(
+    //             "Error when trying to open an URL in your browser: {:?}. \
+    //              Please navigate here manually: {}",
+    //             why, url
+    //         ),
+    //     }
+
+    //     // log::info!("Prompting user for code");
+    //     println!("Please enter the URL you were redirected to: ");
+    //     let mut input = String::new();
+    //     std::io::stdin().read_line(&mut input)?;
+    //     let code = self
+    //         .api
+    //         .parse_response_code(&input)
+    //         .ok_or_else(|| ClientError::Cli("unable to parse the response code".to_string()))?;
+
+    //     Ok(code)
+    // }
 }
 
 impl Default for SpotiApi {

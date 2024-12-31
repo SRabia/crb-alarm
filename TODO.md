@@ -49,6 +49,7 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] make the info log from rspotify to redirect to a ui
 - [ ] the client id and secret need to be injected from client have a prompt with indicatation on how to do it.
 - [ ] will have to go full async to simplify auth!
+- [ ] figure out how to setup token_cache json and .env client_id an client secret
  
  ## control
 - [ ] have a start stop key binding __easy__
