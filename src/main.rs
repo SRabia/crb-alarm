@@ -5,7 +5,8 @@ use color_eyre::Result;
 use cbr_alarm::app;
 use std::time::Duration;
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let args = cli::Cli::parse();
 
     let mut tm_s = Duration::from_secs(5);

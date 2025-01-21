@@ -38,50 +38,10 @@ impl SpotiApi {
         let spotify = AuthCodePkceSpotify::with_config(creds.clone(), oauth.clone(), config);
 
         Self { api: spotify }
-
-        // Running the requests
-        // let history = spotify.current_playback(None, None::<Vec<_>>).await;
-        // println!("Response: {history:?}");
-
-        // let res_user = spotify.me().await;
-        // match res_user {
-        //     Ok(me) => {
-        //         println!("me: {:?}", me);
-        //     }
-        //     Err(er) => {
-        //         eprintln!("erro retrieving user info {:?}", er);
-        //     }
-        // }
-        // let mut playlist: Vec<SimplifiedPlaylist> = Vec::new();
-
-        // let mut playlists: Vec<SimplifiedPlaylist> = Vec::new();
-        // let mut offset = 0;
-        // let limit = 50; // Maximum playlists per request
-
-        // loop {
-        //     match spotify
-        //         .current_user_playlists_manual(Some(limit), Some(offset))
-        //         .await
-        //     {
-        //         Ok(page) => {
-        //             playlists.extend(page.items);
-        //             if playlists.len() >= page.total as usize {
-        //                 break;
-        //             }
-        //             offset += limit;
-        //         }
-        //         Err(err) => {
-        //             eprintln!("Error fetching playlists: {:?}", err);
-        //             break;
-        //         }
-        //     }
-        // }
-        // for p in playlists {
-        //     println!("Playlist: {}", p.name);
     }
 
-    pub fn get_user_info(&self) -> PrivateUser {
-        self.api.me().unwrap()
+    pub async fn get_user_info(&self) -> PrivateUser {
+        self.api.me().await.unwrap()
     }
 
     //TODO: remove, this is just for testing
@@ -92,31 +52,31 @@ impl SpotiApi {
     //TOTO: WIP this won't work need a tcp listener and tokio to make it non-blocking
     //while waiting for input from user
     //
-    pub fn try_auth(&mut self) -> ClientResult<()> {
+    pub async fn try_auth(&mut self) -> ClientResult<()> {
         let url = self.api.get_authorize_url(None).unwrap();
-        match self.api.read_token_cache(true) {
+        match self.api.read_token_cache(true).await {
             Ok(Some(new_token)) => {
                 let expired = new_token.is_expired();
 
-                *self.api.get_token().lock().unwrap() = Some(new_token);
+                *self.api.get_token().lock().await.unwrap() = Some(new_token);
                 if expired {
-                    match self.api.refetch_token()? {
+                    match self.api.refetch_token().await? {
                         Some(refreshed_token) => {
-                            *self.api.get_token().lock().unwrap() = Some(refreshed_token)
+                            *self.api.get_token().lock().await.unwrap() = Some(refreshed_token)
                         }
                         None => {
                             let code = self.api.get_code_from_user(&url)?;
-                            self.api.request_token(&code)?;
+                            self.api.request_token(&code).await?;
                         }
                     }
                 }
             }
             _ => {
                 let code = self.api.get_code_from_user(&url)?;
-                self.api.request_token(&code)?;
+                self.api.request_token(&code).await?;
             }
         }
-        self.api.write_token_cache()
+        self.api.write_token_cache().await
     }
 
     pub fn open_webbrowser_auth(&self, url: &str) -> ClientResult<String> {
