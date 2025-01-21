@@ -239,6 +239,18 @@ fn timeout_complete() {
     let rand_select = rand::thread_rng().gen_range(0..nb_sound_files);
     let sounds: Vec<_> = Asset::iter().collect();
     let sound_select = sounds.get(rand_select).unwrap().clone();
+    // tokio::spawn(async move {
+    //     let (_s, sh) = rodio::OutputStream::try_default().unwrap();
+    //     let file_data = Asset::get(sound_select.as_ref()).unwrap();
+
+    //     let cursor = std::io::Cursor::new(file_data.data);
+    //     let reader = std::io::BufReader::new(cursor);
+    //     let source = rodio::Decoder::new(reader).unwrap();
+    //     let sink = rodio::Sink::try_new(&sh).unwrap();
+
+    //     sink.append(source);
+    //     sink.sleep_until_end();
+    // });
 
     std::thread::spawn(move || {
         let (_s, sh) = rodio::OutputStream::try_default().unwrap();
