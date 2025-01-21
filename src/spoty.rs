@@ -79,15 +79,16 @@ impl SpotiApi {
         self.api.write_token_cache().await
     }
 
-    pub fn open_webbrowser_auth(&self, url: &str) -> ClientResult<String> {
+    pub fn open_webbrowser_auth(&mut self) -> ClientResult<String> {
         use rspotify::ClientError;
         use webbrowser;
-        match webbrowser::open(url) {
-            Ok(_) => Ok(format!("Opend {} in your browser.", url)),
+        let url = self.api.get_authorize_url(None).unwrap();
+        match webbrowser::open(&url) {
+            Ok(_) => Ok(format!("Opening in browser: {}", url)),
             Err(why) => Err(ClientError::Cli(format!(
                 "Error when trying to open an URL in your browser: {:?}. \
                  Please navigate here manually: {}",
-                why, url
+                why, &url
             ))),
         }
     }
