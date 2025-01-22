@@ -21,7 +21,36 @@ const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier:
 const TEXT_FG_COLOR: Color = SLATE.c200;
 // const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
 
-type SelfActionMethod = fn(&mut MusicPlayer) -> String;
+type ActionReturnType = ApiState;
+type SelfActionMethod = fn(&mut MusicPlayer) -> ActionReturnType;
+
+#[derive(Default, PartialEq, Eq)]
+enum ApiState {
+    #[default]
+    Idle,
+    Connecting(String),
+    Connected(String),
+    Auth(String),
+    Error(String),
+}
+
+// struct WidgetResult {
+//     render_fn: Box<dyn FnMut(Rect, &mut Buffer)>,
+// }
+
+// impl WidgetResult {
+//     fn new<W: Widget + 'static>(widget: W) -> Self {
+//         Self {
+//             render_fn: Box::new(move |area, buf| widget.render(area, buf)),
+//         }
+//     }
+// }
+
+// impl Widget for WidgetResult {
+//     fn render(mut self, area: Rect, buf: &mut Buffer) {
+//         (self.render_fn)(area, buf);
+//     }
+// }
 
 // #[derive(Debug)]
 pub struct MusicPlayer {
@@ -38,7 +67,7 @@ struct ActionList {
 struct ActionItem {
     action_name: String,
     action: SelfActionMethod,
-    result: String,
+    result: ActionReturnType,
 }
 
 impl ActionItem {
@@ -46,14 +75,18 @@ impl ActionItem {
         Self {
             action_name: action_name.to_string(),
             action: f,
-            result: "".to_string(),
+            result: ApiState::default(),
         }
     }
 }
 
 impl MusicPlayer {
-    fn connect(&mut self) -> String {
-        "connected yeah".to_string()
+    fn connect(&mut self) -> ActionReturnType {
+        let info = self.spoty_api.open_webbrowser_auth();
+        match info {
+            Err(e) => ApiState::Error(e.to_string()),
+            Ok(y) => ApiState::Connecting(y.to_string()),
+        }
     }
 
     pub fn new() -> Self {
@@ -173,29 +206,29 @@ impl MusicPlayer {
         StatefulWidget::render(list, area, buf, &mut self.list_action.state);
     }
 
-    fn render_selected_item(&self, area: Rect, buf: &mut Buffer) {
-        // We get the info depending on the item's state.
-        let info = if let Some(i) = self.list_action.state.selected() {
-            self.list_action.items[i].result.as_str()
-        } else {
-            "No Result"
-        };
+    fn render_selected_item(&mut self, area: Rect, buf: &mut Buffer) {
+        if let Some(i) = self.list_action.state.selected() {
+            let r = &self.list_action.items[i].result;
+            match r {
+                ApiState::Idle => {}
+                ApiState::Connecting(info) => {
+                    let block = Block::new()
+                        .title(Line::raw("Info").centered())
+                        .borders(Borders::TOP)
+                        .border_set(symbols::border::EMPTY)
+                        .border_style(TODO_HEADER_STYLE)
+                        .bg(NORMAL_ROW_BG)
+                        .padding(Padding::horizontal(1));
 
-        // We show the list item's info under the list in this paragraph
-        let block = Block::new()
-            .title(Line::raw("TODO Info").centered())
-            .borders(Borders::TOP)
-            .border_set(symbols::border::EMPTY)
-            .border_style(TODO_HEADER_STYLE)
-            .bg(NORMAL_ROW_BG)
-            .padding(Padding::horizontal(1));
-
-        // We can now render the item info
-        Paragraph::new(info)
-            .block(block)
-            .fg(TEXT_FG_COLOR)
-            .wrap(Wrap { trim: false })
-            .render(area, buf);
+                    Paragraph::new(info.as_str())
+                        .block(block)
+                        .fg(TEXT_FG_COLOR)
+                        .wrap(Wrap { trim: false })
+                        .render(area, buf);
+                }
+                _ => {}
+            }
+        }
     }
 }
 
@@ -210,10 +243,188 @@ const fn alternate_colors(i: usize) -> Color {
 impl From<&ActionItem> for ListItem<'_> {
     fn from(value: &ActionItem) -> Self {
         let line = Line::styled(format!(" ☐ {}", value.action_name), TEXT_FG_COLOR);
-        // let line = match value.cmd {
-        //     Command::ConnectSpotify => Line::styled(format!(" ☐ {}", value.todo), TEXT_FG_COLOR),
-        //     // Command::Quit => Line::styled(format!(" ✓ {}", value.todo), COMPLETED_TEXT_FG_COLOR),
-        // };
         ListItem::new(line)
     }
 }
+
+// use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+// use ratatui::{
+//     buffer::Buffer,
+//     layout::{Constraint, Layout, Offset, Rect},
+//     style::Stylize,
+//     text::Line,
+//     widgets::Widget,
+//     DefaultTerminal, Frame,
+// };
+// use serde::Serialize;
+
+// fn main() -> Result<()> {
+//     color_eyre::install()?;
+//     let terminal = ratatui::init();
+//     let result = App::default().run(terminal);
+//     ratatui::restore();
+
+//     // serialize the form to JSON if the user submitted it, otherwise print "Canceled"
+//     match result {
+//         Ok(Some(form)) => println!("{}", serde_json::to_string_pretty(&form)?),
+//         Ok(None) => println!("Canceled"),
+//         Err(err) => eprintln!("{err}"),
+//     }
+//     Ok(())
+// }
+
+// #[derive(Default)]
+// struct App {
+//     state: AppState,
+//     form: InputForm,
+// }
+
+// #[derive(Default, PartialEq, Eq)]
+// enum AppState {
+//     #[default]
+//     Running,
+//     Cancelled,
+//     Submitted,
+// }
+
+// impl App {
+//     fn run(mut self, mut terminal: DefaultTerminal) -> Result<Option<InputForm>> {
+//         while self.state == AppState::Running {
+//             terminal.draw(|frame| self.render(frame))?;
+//             self.handle_events()?;
+//         }
+//         match self.state {
+//             AppState::Cancelled => Ok(None),
+//             AppState::Submitted => Ok(Some(self.form)),
+//             AppState::Running => unreachable!(),
+//         }
+//     }
+
+//     fn render(&self, frame: &mut Frame) {
+//         self.form.render(frame);
+//     }
+
+//     fn handle_events(&mut self) -> Result<()> {
+//         match event::read()? {
+//             Event::Key(event) if event.kind == KeyEventKind::Press => match event.code {
+//                 KeyCode::Esc => self.state = AppState::Cancelled,
+//                 KeyCode::Enter => self.state = AppState::Submitted,
+//                 _ => self.form.on_key_press(event),
+//             },
+//             _ => {}
+//         }
+//         Ok(())
+//     }
+// }
+
+// struct InputForm {
+//     focus: Focus,
+//     first_name: StringField,
+// }
+
+// impl Default for InputForm {
+//     fn default() -> Self {
+//         Self {
+//             focus: Focus::FirstName,
+//             first_name: StringField::new("First Name"),
+//             last_name: StringField::new("Last Name"),
+//             age: AgeField::new("Age"),
+//         }
+//     }
+// }
+
+// impl InputForm {
+//     // Handle focus navigation or pass the event to the focused field.
+//     fn on_key_press(&mut self, event: KeyEvent) {
+//         match event.code {
+//             KeyCode::Tab => self.focus = self.focus.next(),
+//             _ => match self.focus {
+//                 Focus::FirstName => self.first_name.on_key_press(event),
+//                 Focus::LastName => self.last_name.on_key_press(event),
+//                 Focus::Age => self.age.on_key_press(event),
+//             },
+//         }
+//     }
+
+//     /// Render the form with the current focus.
+//     ///
+//     /// The cursor is placed at the end of the focused field.
+//     fn render(&self, frame: &mut Frame) {
+//         let [first_name_area, last_name_area, age_area] =
+//             Layout::vertical(Constraint::from_lengths([1, 1, 1])).areas(frame.area());
+
+//         frame.render_widget(&self.first_name, first_name_area);
+//         frame.render_widget(&self.last_name, last_name_area);
+//         frame.render_widget(&self.age, age_area);
+
+//         let cursor_position = match self.focus {
+//             Focus::FirstName => first_name_area.offset(self.first_name.cursor_offset()),
+//             Focus::LastName => last_name_area.offset(self.last_name.cursor_offset()),
+//             Focus::Age => age_area.offset(self.age.cursor_offset()),
+//         };
+//         frame.set_cursor_position(cursor_position);
+//     }
+// }
+
+// #[derive(Default, PartialEq, Eq)]
+// enum Focus {
+//     #[default]
+//     FirstName,
+//     LastName,
+//     Age,
+// }
+
+// impl Focus {
+//     // Round-robin focus order.
+//     const fn next(&self) -> Self {
+//         match self {
+//             Self::FirstName => Self::LastName,
+//             Self::LastName => Self::Age,
+//         }
+//     }
+// }
+
+// /// A new-type representing a string field with a label.
+// #[derive(Debug)]
+// struct StringField {
+//     label: &'static str,
+//     value: String,
+// }
+
+// impl StringField {
+//     const fn new(label: &'static str) -> Self {
+//         Self {
+//             label,
+//             value: String::new(),
+//         }
+//     }
+
+//     /// Handle input events for the string input.
+//     fn on_key_press(&mut self, event: KeyEvent) {
+//         match event.code {
+//             KeyCode::Char(c) => self.value.push(c),
+//             KeyCode::Backspace => {
+//                 self.value.pop();
+//             }
+//             _ => {}
+//         }
+//     }
+
+//     fn cursor_offset(&self) -> Offset {
+//         let x = (self.label.len() + self.value.len() + 2) as i32;
+//         Offset::new(x, 0)
+//     }
+// }
+
+// impl Widget for &StringField {
+//     fn render(self, area: Rect, buf: &mut Buffer) {
+//         let constraints = [
+//             Constraint::Length(self.label.len() as u16 + 2),
+//             Constraint::Fill(1),
+//         ];
+//         let [label_area, value_area] = Layout::horizontal(constraints).areas(area);
+//         let label = Line::from_iter([self.label, ": "]).bold();
+//         label.render(label_area, buf);
+//         self.value.clone().render(value_area, buf);
+//     }
+// }

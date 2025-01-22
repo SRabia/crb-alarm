@@ -6,7 +6,7 @@ use color_eyre::Result;
 use rand::Rng;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-    layout::{self, Constraint, Layout, Rect},
+    layout::{self, Constraint, Layout},
     style::{Color, Style, Stylize},
     symbols::border,
     text::{Line, Span, ToSpan},
