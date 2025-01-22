@@ -22,13 +22,11 @@ const TEXT_FG_COLOR: Color = SLATE.c200;
 // const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
 
 type ActionReturnType = ApiState;
-type SelfActionMethod = fn(&mut MusicPlayer) -> ActionReturnType;
 
 #[derive(Default, PartialEq, Eq)]
 enum ApiState {
     #[default]
-    Idle,
-    Connecting(String),
+    Connecting,
     Connected(String),
     Auth(String),
     Error(String),
@@ -66,32 +64,30 @@ struct ActionList {
 
 struct ActionItem {
     action_name: String,
-    action: SelfActionMethod,
     result: ActionReturnType,
 }
 
 impl ActionItem {
-    fn new(action_name: &str, f: SelfActionMethod) -> Self {
+    fn new(action_name: &str) -> Self {
         Self {
             action_name: action_name.to_string(),
-            action: f,
             result: ApiState::default(),
         }
     }
 }
 
 impl MusicPlayer {
-    fn connect(&mut self) -> ActionReturnType {
-        let info = self.spoty_api.open_webbrowser_auth();
+    async fn connect(&mut self) -> ActionReturnType {
+        let info = self.spoty_api.try_auth().await;
         match info {
             Err(e) => ApiState::Error(e.to_string()),
-            Ok(y) => ApiState::Connecting(y.to_string()),
+            Ok(()) => ApiState::Connected("connection successful".to_string()),
         }
     }
 
     pub fn new() -> Self {
         let spoty_api = spoty::SpotiApi::default();
-        let list_action_tuple = [("Connect to spotify", Self::connect as SelfActionMethod)];
+        let list_action_tuple = ["Connect to spotify"];
         Self {
             spoty_api,
             list_action: ActionList::from_iter(list_action_tuple),
@@ -117,20 +113,20 @@ impl MusicPlayer {
         self.list_action.state.select_last();
     }
 
-    pub fn do_action(&mut self) {
+    pub async fn do_action(&mut self) {
         if let Some(i) = self.list_action.state.selected() {
-            let r = (self.list_action.items[i].action)(self);
-            self.list_action.items[i].result = r;
+            let r = &self.list_action.items[i].result;
+            match r {
+                ApiState::Connecting => self.list_action.items[i].result = self.connect().await,
+                _ => {}
+            };
         }
     }
 }
 
-impl FromIterator<(&'static str, SelfActionMethod)> for ActionList {
-    fn from_iter<I: IntoIterator<Item = (&'static str, SelfActionMethod)>>(iter: I) -> Self {
-        let items = iter
-            .into_iter()
-            .map(|(info, f)| ActionItem::new(info, f))
-            .collect();
+impl FromIterator<&'static str> for ActionList {
+    fn from_iter<I: IntoIterator<Item = &'static str>>(iter: I) -> Self {
+        let items = iter.into_iter().map(|info| ActionItem::new(info)).collect();
         let state = ListState::default();
         Self { items, state }
     }
@@ -207,20 +203,25 @@ impl MusicPlayer {
     }
 
     fn render_selected_item(&mut self, area: Rect, buf: &mut Buffer) {
+        let block = Block::new()
+            .title(Line::raw("Info").centered())
+            .borders(Borders::TOP)
+            .border_set(symbols::border::EMPTY)
+            .border_style(TODO_HEADER_STYLE)
+            .bg(NORMAL_ROW_BG)
+            .padding(Padding::horizontal(1));
         if let Some(i) = self.list_action.state.selected() {
             let r = &self.list_action.items[i].result;
             match r {
-                ApiState::Idle => {}
-                ApiState::Connecting(info) => {
-                    let block = Block::new()
-                        .title(Line::raw("Info").centered())
-                        .borders(Borders::TOP)
-                        .border_set(symbols::border::EMPTY)
-                        .border_style(TODO_HEADER_STYLE)
-                        .bg(NORMAL_ROW_BG)
-                        .padding(Padding::horizontal(1));
-
+                ApiState::Connected(info) => {
                     Paragraph::new(info.as_str())
+                        .block(block)
+                        .fg(TEXT_FG_COLOR)
+                        .wrap(Wrap { trim: false })
+                        .render(area, buf);
+                }
+                ApiState::Error(e) => {
+                    Paragraph::new(e.as_str())
                         .block(block)
                         .fg(TEXT_FG_COLOR)
                         .wrap(Wrap { trim: false })

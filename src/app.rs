@@ -79,7 +79,7 @@ impl App {
         }
     }
 
-    fn handle_event_player(&mut self, key: KeyEvent) {
+    async fn handle_event_player(&mut self, key: KeyEvent) {
         if key.kind != KeyEventKind::Press {
             return;
         }
@@ -91,26 +91,26 @@ impl App {
             KeyCode::Char('g') | KeyCode::Home => self.player.select_first(),
             KeyCode::Char('G') | KeyCode::End => self.player.select_last(),
             KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
-                self.player.do_action();
+                self.player.do_action().await;
                 // self.player.enter_command();
             }
             _ => {}
         }
     }
 
-    fn handle_event(&mut self, key: KeyEvent) {
+    async fn handle_event(&mut self, key: KeyEvent) {
         match self.state {
             AppState::Main => {
                 self.handle_event_main(key);
             }
             AppState::CmdSelect => {
-                self.handle_event_player(key);
+                self.handle_event_player(key).await;
             }
             _ => {}
         }
     }
 
-    pub fn run(&mut self, mut terminal: DefaultTerminal) -> Result<()> {
+    pub async fn run(&mut self, mut terminal: DefaultTerminal) -> Result<()> {
         let tick_rate = Duration::from_millis(16);
         let mut last_tick = Instant::now();
         while self.state != AppState::Quit {
@@ -121,7 +121,7 @@ impl App {
             if event::poll(interval_tick)? {
                 // block for 16ms
                 if let Event::Key(key) = event::read()? {
-                    self.handle_event(key);
+                    self.handle_event(key).await;
                 }
             }
 
