@@ -45,11 +45,13 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] refator event handle with context
 
  ## spotify
-- [ ] have a connect to spotify "kind of button" to connect: update ui part is done
+- [X] have a connect to spotify "kind of button" to connect: update ui part is done
+- [ ] when already go a token connect directly(no connect button)
 - [ ] make the info log from rspotify to redirect to a ui
+- [ ] rspotify `get_code_from_user` has print stdout have to rewrite it!
 - [ ] the client id and secret need to be injected from client have a prompt with indicatation on how to do it.
-- [ ] will have to go full async to simplify auth!
 - [ ] figure out how to setup token_cache json and .env client_id an client secret
+- [ ] display the user info correctly once connected
  
  ## control
 - [ ] have a start stop key binding __easy__

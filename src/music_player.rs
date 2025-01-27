@@ -13,71 +13,81 @@ use ratatui::{
         StatefulWidget, Widget, Wrap,
     },
 };
+use rspotify::model::{PlayableItem, PrivateUser, SimplifiedPlaylist};
 
 const TODO_HEADER_STYLE: Style = Style::new().fg(SLATE.c100).bg(BLUE.c800);
 const NORMAL_ROW_BG: Color = SLATE.c950;
 const ALT_ROW_BG_COLOR: Color = SLATE.c900;
 const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier::BOLD);
 const TEXT_FG_COLOR: Color = SLATE.c200;
-// const COMPLETED_TEXT_FG_COLOR: Color = GREEN.c500;
 
-type ActionReturnType = ApiState;
+///TODO
+/// 1. select back from track to playlist with arrows
+/// 2. play selected music with animation as time track
 
 #[derive(Default, PartialEq, Eq)]
 enum ApiState {
     #[default]
     Connecting,
     Connected(String),
-    Auth(String),
     Error(String),
 }
+#[derive(Debug)]
+enum ActionType {
+    ConnectToSpotify,
+    Playlist(usize),
+    Track(usize),
+}
 
-// struct WidgetResult {
-//     render_fn: Box<dyn FnMut(Rect, &mut Buffer)>,
-// }
-
-// impl WidgetResult {
-//     fn new<W: Widget + 'static>(widget: W) -> Self {
-//         Self {
-//             render_fn: Box::new(move |area, buf| widget.render(area, buf)),
-//         }
-//     }
-// }
-
-// impl Widget for WidgetResult {
-//     fn render(mut self, area: Rect, buf: &mut Buffer) {
-//         (self.render_fn)(area, buf);
-//     }
-// }
-
-// #[derive(Debug)]
 pub struct MusicPlayer {
     spoty_api: spoty::SpotiApi,
     list_action: ActionList,
+    user: Option<PrivateUser>,
+    playlist: Option<Vec<SimplifiedPlaylist>>,
+    state: ApiState,
 }
-
-// #[derive(Debug)]
 struct ActionList {
     items: Vec<ActionItem>,
     state: ListState,
 }
 
+impl ActionList {
+    fn new<I: IntoIterator<Item = (String, ActionType)>>(iter: I) -> Self {
+        let items = iter
+            .into_iter()
+            .map(|(info, ac)| ActionItem::new_with_fucking_string(info, ac))
+            .collect();
+        let state = ListState::default();
+        Self { items, state }
+    }
+}
+
 struct ActionItem {
     action_name: String,
-    result: ActionReturnType,
+    action_type: ActionType,
+    // result: ApiState,
 }
 
 impl ActionItem {
-    fn new(action_name: &str) -> Self {
+    fn new(action_name: &str, act_type: ActionType) -> Self {
         Self {
             action_name: action_name.to_string(),
-            result: ApiState::default(),
+            action_type: act_type,
+            // result: ApiState::default(),
+        }
+    }
+
+    fn new_with_fucking_string(action_name: String, act_type: ActionType) -> Self {
+        Self {
+            action_name,
+            action_type: act_type,
+            // result: ApiState::default(),
         }
     }
 }
 
 impl MusicPlayer {
-    async fn connect(&mut self) -> ActionReturnType {
+    async fn connect(&mut self) -> ApiState {
         let info = self.spoty_api.try_auth().await;
         match info {
             Err(e) => ApiState::Error(e.to_string()),
@@ -87,10 +97,14 @@ impl MusicPlayer {
 
     pub fn new() -> Self {
         let spoty_api = spoty::SpotiApi::default();
-        let list_action_tuple = ["Connect to spotify"];
+        //TODO: if already connect maybe show the playlist
+        let list_action_tuple = [("Connect to spotify", ActionType::ConnectToSpotify)];
         Self {
             spoty_api,
+            user: None,
+            playlist: None,
             list_action: ActionList::from_iter(list_action_tuple),
+            state: ApiState::default(),
         }
     }
 
@@ -101,6 +115,7 @@ impl MusicPlayer {
     pub fn select_next(&mut self) {
         self.list_action.state.select_next();
     }
+
     pub fn select_previous(&mut self) {
         self.list_action.state.select_previous();
     }
@@ -113,20 +128,65 @@ impl MusicPlayer {
         self.list_action.state.select_last();
     }
 
+    //TODO: not sure about the static life
     pub async fn do_action(&mut self) {
         if let Some(i) = self.list_action.state.selected() {
-            let r = &self.list_action.items[i].result;
+            let r = &self.list_action.items[i].action_type;
+            //TODO: should be actionEnum diff from ApiState
             match r {
-                ApiState::Connecting => self.list_action.items[i].result = self.connect().await,
+                ActionType::ConnectToSpotify => {
+                    let conn_res = self.connect().await;
+                    if let ApiState::Connected(_) = conn_res {
+                        self.user = self.spoty_api.get_user_info().await;
+                        self.playlist = self.spoty_api.get_user_playlist().await.ok();
+                        if let Some(l) = &self.playlist {
+                            let list_action_tuple: Vec<(String, ActionType)> = l
+                                .iter()
+                                .enumerate()
+                                .map(|(i, x)| (x.name.clone(), ActionType::Playlist(i)))
+                                .collect();
+                            self.list_action = ActionList::new(list_action_tuple.into_iter());
+                        }
+                    }
+                    self.state = conn_res;
+                }
+
+                ActionType::Playlist(i) => {
+                    if let Some(playlist) = &self.playlist {
+                        let p = playlist.get(*i).unwrap();
+                        //TODO:: remove the unwrap have early return
+                        let tracks = self.spoty_api.get_playlist_track(p).await.unwrap();
+                        let list_action_tuple: Vec<(String, ActionType)> = tracks
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(i, x)| {
+                                if let Some(p) = &x.track {
+                                    match p {
+                                        PlayableItem::Track(t) => {
+                                            Some((t.name.clone(), ActionType::Track(i)))
+                                        }
+                                        _ => None,
+                                    }
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        self.list_action = ActionList::new(list_action_tuple.into_iter());
+                    }
+                }
                 _ => {}
             };
         }
     }
 }
 
-impl FromIterator<&'static str> for ActionList {
-    fn from_iter<I: IntoIterator<Item = &'static str>>(iter: I) -> Self {
-        let items = iter.into_iter().map(|info| ActionItem::new(info)).collect();
+impl FromIterator<(&'static str, ActionType)> for ActionList {
+    fn from_iter<I: IntoIterator<Item = (&'static str, ActionType)>>(iter: I) -> Self {
+        let items = iter
+            .into_iter()
+            .map(|(info, ac)| ActionItem::new(info, ac))
+            .collect();
         let state = ListState::default();
         Self { items, state }
     }
@@ -137,6 +197,7 @@ impl Default for MusicPlayer {
         Self::new()
     }
 }
+
 impl Widget for &mut MusicPlayer {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let [header_area, main_area, footer_area] = Layout::vertical([
@@ -146,13 +207,13 @@ impl Widget for &mut MusicPlayer {
         ])
         .areas(area);
 
-        let [list_area, item_area] =
-            Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(main_area);
+        // let [list_area, item_area] =
+        //     Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(main_area);
 
         MusicPlayer::render_header(header_area, buf);
         MusicPlayer::render_footer(footer_area, buf);
-        self.render_list(list_area, buf);
-        self.render_selected_item(item_area, buf);
+        self.render_list(main_area, buf); //chagne this to an an info widg
+                                          // self.render_selected_item(item_area, buf);
     }
 }
 
@@ -202,35 +263,39 @@ impl MusicPlayer {
         StatefulWidget::render(list, area, buf, &mut self.list_action.state);
     }
 
-    fn render_selected_item(&mut self, area: Rect, buf: &mut Buffer) {
-        let block = Block::new()
-            .title(Line::raw("Info").centered())
-            .borders(Borders::TOP)
-            .border_set(symbols::border::EMPTY)
-            .border_style(TODO_HEADER_STYLE)
-            .bg(NORMAL_ROW_BG)
-            .padding(Padding::horizontal(1));
-        if let Some(i) = self.list_action.state.selected() {
-            let r = &self.list_action.items[i].result;
-            match r {
-                ApiState::Connected(info) => {
-                    Paragraph::new(info.as_str())
-                        .block(block)
-                        .fg(TEXT_FG_COLOR)
-                        .wrap(Wrap { trim: false })
-                        .render(area, buf);
-                }
-                ApiState::Error(e) => {
-                    Paragraph::new(e.as_str())
-                        .block(block)
-                        .fg(TEXT_FG_COLOR)
-                        .wrap(Wrap { trim: false })
-                        .render(area, buf);
-                }
-                _ => {}
-            }
-        }
-    }
+    // fn render_selected_item(&mut self, area: Rect, buf: &mut Buffer) {
+    //     let block = Block::new()
+    //         .title(Line::raw("Info").centered())
+    //         .borders(Borders::TOP)
+    //         .border_set(symbols::border::EMPTY)
+    //         .border_style(TODO_HEADER_STYLE)
+    //         .bg(NORMAL_ROW_BG)
+    //         .padding(Padding::horizontal(1));
+    //     // if let Some(i) = self.list_action.state.selected() {
+    //     //     let r = &self.list_action.items[i].result;
+    //     //     match r {
+    //     //         ApiState::Connected(info) => {
+    //     //             // if let Ok(user_name) =  self.user{
+
+    //     //             // }
+    //     //             let info = format!("{info} user: {:?}", self.user);
+    //     //             Paragraph::new(info.as_str())
+    //     //                 .block(block)
+    //     //                 .fg(TEXT_FG_COLOR)
+    //     //                 .wrap(Wrap { trim: false })
+    //     //                 .render(area, buf);
+    //     //         }
+    //     //         ApiState::Error(e) => {
+    //     //             Paragraph::new(e.as_str())
+    //     //                 .block(block)
+    //     //                 .fg(TEXT_FG_COLOR)
+    //     //                 .wrap(Wrap { trim: false })
+    //     //                 .render(area, buf);
+    //     //         }
+    //     //         _ => {}
+    //     //     }
+    //     // }
+    // }
 }
 
 const fn alternate_colors(i: usize) -> Color {
