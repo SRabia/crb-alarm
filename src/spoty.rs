@@ -1,5 +1,5 @@
 use rspotify::{
-    model::{playlist::*, Market, PrivateUser},
+    model::{device, playlist::*, Market, PrivateUser},
     prelude::*,
     scopes, AuthCodePkceSpotify, ClientResult, Config, Credentials, OAuth,
 };
@@ -74,92 +74,30 @@ impl SpotiApi {
         }
         Ok(playlist)
     }
-    // async fn test_playback() {
-    //     let client = oauth_client().await;
-    //     let uris = [
-    //         PlayableId::Track(TrackId::from_uri("spotify:track:4iV5W9uYEdYUVa79Axb7Rh").unwrap()),
-    //         PlayableId::Track(TrackId::from_uri("spotify:track:2DzSjFQKetFhkFCuDWhioi").unwrap()),
-    //         PlayableId::Episode(EpisodeId::from_id("0lbiy3LKzIY2fnyjioC11p").unwrap()),
-    //     ];
-    //     let devices = client.device().await.unwrap();
 
-    //     // Save current playback data to be restored later
-    //     // NOTE: unfortunately it's impossible to revert the entire queue, this will
-    //     // just restore the song playing at the moment.
-    //     let backup = client.current_playback(None, None::<&[_]>).await.unwrap();
-
-    //     for (i, device) in devices.iter().enumerate() {
-    //         let device_id = device.id.as_ref().unwrap();
-    //         let next_device_id = devices
-    //             .get(i + 1)
-    //             .unwrap_or(&devices[0])
-    //             .id
-    //             .as_ref()
-    //             .unwrap();
-
-    //         // Starting playback of some songs
-    //         client
-    //             .start_uris_playback(
-    //                 uris.iter().map(PlayableId::as_ref),
-    //                 Some(device_id),
-    //                 Some(Offset::Position(chrono::Duration::zero())),
-    //                 None,
-    //             )
-    //             .await
-    //             .unwrap();
-
-    //         for i in 0..uris.len() - 1 {
-    //             client.next_track(Some(device_id)).await.unwrap();
-
-    //             // Also trying to go to the previous track
-    //             if i != 0 {
-    //                 client.previous_track(Some(device_id)).await.unwrap();
-    //                 client.next_track(Some(device_id)).await.unwrap();
-    //             }
-
-    //             // Making sure pause/resume also works
-    //             let playback = client.current_playback(None, None::<&[_]>).await.unwrap();
-    //             if let Some(playback) = playback {
-    //                 if playback.is_playing {
-    //                     client.pause_playback(Some(device_id)).await.unwrap();
-    //                     client.resume_playback(None, None).await.unwrap();
-    //                 } else {
-    //                     client.resume_playback(None, None).await.unwrap();
-    //                     client.pause_playback(Some(device_id)).await.unwrap();
-    //                 }
-    //             }
-    //         }
-
-    //         client
-    //             .transfer_playback(next_device_id, Some(true))
-    //             .await
-    //             .unwrap();
-    //     }
-
-    //     // Restore the original playback data
-    //     if let Some(backup) = &backup {
-    //         let uri = backup.item.as_ref().map(|item| item.id());
-    //         if let Some(uri) = uri {
-    //             let offset = None;
-    //             let device = backup.device.id.as_deref();
-    //             let position = backup.progress;
-    //             client
-    //                 .start_uris_playback(uri, device, offset, position)
-    //                 .await
-    //                 .unwrap();
-    //         }
-    //     }
-    //     // Pause the playback by default, unless it was playing before
-    //     if !backup.map(|b| b.is_playing).unwrap_or(false) {
-    //         client.pause_playback(None).await.unwrap();
-    //     }
-    // }
-
-    pub async fn play_music(&self) {
+    pub async fn play_music(&self, playlist: &SimplifiedPlaylist) {
         let devices = self.api.device().await.unwrap();
-
-        //     let devices = client.device().await.unwrap();
+        //TODO:: requires premium..
+        println!("devices : {:?}", devices);
+        if let Some(first_dev_avail) = devices.iter().find(|d| d.is_active) {
+            println!("hhhhhhhhh    feofe");
+            self.api
+                .start_context_playback(
+                    PlayContextId::Playlist(playlist.id.clone()),
+                    first_dev_avail.id.as_deref(),
+                    None,
+                    // Some(rspotify::model::Offset::Position(Duration::ZERO)),
+                    None,
+                )
+                .await
+                .unwrap(); //TODO:can't unwrap here if we get http err
+            self.api
+                .transfer_playback(first_dev_avail.id.as_deref().unwrap(), Some(true))
+                .await
+                .unwrap(); //TODO: can't unwrap!
+        }
     }
+
     pub async fn get_playlist_track(
         &self,
         playlist: &SimplifiedPlaylist,

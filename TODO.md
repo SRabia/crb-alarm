@@ -52,7 +52,7 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] the client id and secret need to be injected from client have a prompt with indicatation on how to do it.
 - [ ] figure out how to setup token_cache json and .env client_id an client secret
 - [ ] display the user info correctly once connected
- 
+
  ## control
 - [ ] have a start stop key binding __easy__
 - [ ] have a option, arg to play music during time or after time
@@ -73,11 +73,9 @@ reaseach how font work, how can we import font to display on terminal
 - [ ] Theme module to get all color from eventually configurable
 
 ## bug to fix maybe
-- [ ] zig zag is glitchy pattern is off the screen
+- [ ] zig zag is glitchy pattern is off the screen and ugly
 
 ## research
 - [X] spotify api how it work? is it possible?
 - [ ] can this work on embedd? with a serial comm TUI? probably need to reseach crossterm
-
-
 

@@ -175,7 +175,32 @@ impl MusicPlayer {
                         self.list_action = ActionList::new(list_action_tuple.into_iter());
                     }
                 }
-                _ => {}
+
+                ActionType::Track(_i) => {
+                    if let Some(playlist) = &self.playlist {
+                        let p = playlist.get(0).unwrap();
+                        self.spoty_api.play_music(p).await;
+                        //TODO:: remove the unwrap have early return
+                        // let tracks = self.spoty_api.get_playlist_track(p).await.unwrap();
+                        // let list_action_tuple: Vec<(String, ActionType)> = tracks
+                        //     .iter()
+                        //     .enumerate()
+                        //     .filter_map(|(i, x)| {
+                        //         if let Some(p) = &x.track {
+                        //             match p {
+                        //                 PlayableItem::Track(t) => {
+                        //                     Some((t.name.clone(), ActionType::Track(i)))
+                        //                 }
+                        //                 _ => None,
+                        //             }
+                        //         } else {
+                        //             None
+                        //         }
+                        //     })
+                        //     .collect();
+                        // self.list_action = ActionList::new(list_action_tuple.into_iter());
+                    }
+                } // _ => {}
             };
         }
     }
